@@ -1,0 +1,55 @@
+site_name: k8s-iannamo
+site_description: Documentazione del cluster Kubernetes homelab GitOps
+site_url: https://lucaam.github.io/k8s-iannamo/
+repo_url: https://github.com/lucaam/k8s-iannamo
+repo_name: lucaam/k8s-iannamo
+
+theme:
+  name: material
+  language: it
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Modalità chiara
+    - scheme: default
+      primary: indigo
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Modalità scura
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Architettura: architecture.md
+  - Applicazioni: apps.md
+  - Infrastruttura: infrastructure.md
+  - Storage: storage.md
+  - Networking: networking.md
+  - Sicurezza & Secret: security.md
+  - Monitoraggio & Alert: monitoring.md
+  - Operazioni: operations.md
