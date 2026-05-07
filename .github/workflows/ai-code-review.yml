@@ -1,0 +1,61 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  changelog-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Extract package info from PR title
+        id: package_info
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          UPDATE_TYPE=""
+          if [[ $PR_TITLE =~ chore\(helm\): ]]; then
+            UPDATE_TYPE="helm"
+          elif [[ $PR_TITLE =~ chore\(images\)|chore\(docker\): ]]; then
+            UPDATE_TYPE="docker"
+          fi
+
+          # Match: "update <pkg> (<old> → <new>)" or "update <pkg> (<old> -> <new>)"
+          if [[ $PR_TITLE =~ update\ ([^\ \(]+)\ \(([^\ ]+)\ .\ ([^\ \)]+)\) ]]; then
+            PACKAGE="${BASH_REMATCH[1]}"
+            OLD_VERSION="${BASH_REMATCH[2]}"
+            NEW_VERSION="${BASH_REMATCH[3]}"
+
+            echo "update_type=$UPDATE_TYPE" >> "$GITHUB_OUTPUT"
+            echo "package=$PACKAGE" >> "$GITHUB_OUTPUT"
+            echo "old_version=$OLD_VERSION" >> "$GITHUB_OUTPUT"
+            echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment PR with version info
+        if: steps.package_info.outputs.package != ''
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ## 📋 Update Summary
+
+            | Field | Value |
+            |-------|-------|
+            | **Type** | `${{ steps.package_info.outputs.update_type }}` |
+            | **Package** | `${{ steps.package_info.outputs.package }}` |
+            | **Update** | `${{ steps.package_info.outputs.old_version }}` → `${{ steps.package_info.outputs.new_version }}` |
+
+            ---
+            *Full AI code review is provided by [CodeRabbit](https://coderabbit.ai) — free for public repos, zero API keys.*
+          comment-tag: update-summary
+          edit-mode: replace
