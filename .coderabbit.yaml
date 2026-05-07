@@ -8,6 +8,8 @@ reviews:
       instructions: "This is a Kubernetes (Talos) GitOps repository managed by Flux CD. Review Kubernetes manifests for correctness, security (no hardcoded secrets, proper RBAC), and best practices."
     - path: "infrastructure/**"
       instructions: "Infrastructure components (Traefik, MetalLB, cert-manager, NFS CSI). Check for version compatibility and secure defaults."
+    - path: "docs/**"
+      instructions: "Documentation files. Ensure clarity, accuracy, and completeness of instructions for setting up and maintaining the cluster. Must match the actual cluster configuration and setup steps."
   collapse_walkthrough: true
 chat:
   auto_reply: true
