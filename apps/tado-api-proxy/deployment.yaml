@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tado-api-proxy
+  namespace: tado-proxy
+  labels:
+    app: tado-api-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tado-api-proxy
+  template:
+    metadata:
+      labels:
+        app: tado-api-proxy
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: tado-api-proxy
+        image: ghcr.io/s1adem4n/tado-api-proxy:1.2.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: SUPERUSER_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: tado-proxy-secrets
+              key: email
+        - name: SUPERUSER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: tado-proxy-secrets
+              key: password
+        - name: PB_DATA_DIR
+          value: "/config"
+        - name: PB_ENCRYPTION_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: tado-proxy-config
+              key: PB_ENCRYPTION_KEY
+        volumeMounts:
+        - name: config-data
+          mountPath: /config
+          subPath: pb_data
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 60  # Aumentato a 60s
+          periodSeconds: 30
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10  # Aumentato a 10s
+          periodSeconds: 10
+          failureThreshold: 3
+      volumes:
+      - name: config-data
+        persistentVolumeClaim:
+          claimName: tado-proxy-data

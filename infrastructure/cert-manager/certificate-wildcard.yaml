@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-apps
+  namespace: traefik
+spec:
+  secretName: wildcard-apps-tls
+  issuerRef:
+    name: cloudflare
+    kind: ClusterIssuer
+  dnsNames:
+  - "*.${DOMAIN}"
+  - "*.home.${DOMAIN}"

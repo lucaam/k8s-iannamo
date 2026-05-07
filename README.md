@@ -2,7 +2,7 @@
 
 GitOps repository for a bare-metal Kubernetes cluster running **Talos Linux** on Proxmox, managed by **Flux CD**.
 
-📖 **[Full Documentation](https://lucaam.github.io/k3s-gitops-iannamo/)**
+📖 **[Full Documentation](https://lucaam.github.io/k8s-iannamo/)**
 
 ## Quick Overview
 
@@ -41,7 +41,7 @@ Requires:
 ```bash
 flux bootstrap github \
   --owner=lucaam \
-  --repository=k3s-gitops-iannamo \
+  --repository=k8s-iannamo \
   --branch=main \
   --path=clusters/production
 ```

@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kubelet
+  namespace: prometheus
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kubelet
+  namespaceSelector:
+    any: true
+  endpoints:
+    - port: metrics
+      scheme: https
+      tlsConfig:
+        insecureSkipVerify: true
+      interval: 30s

@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-zfs-dashboard
+  namespace: grafana
+  labels:
+    grafana_dashboard: "1"
+data:
+  zfs-proxmox.json: |-
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 1,
+      "id": null,
+      "title": "ZFS Proxmox",
+      "uid": "zfs-proxmox",
+      "version": 1,
+      "timezone": "browser",
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "templating": {
+        "list": [
+          {
+            "name": "pool",
+            "type": "query",
+            "datasource": "Prometheus",
+            "query": "label_values(zfs_pool_size_bytes, pool)",
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "current": {"text": "All", "value": "$__all"}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "title": "Pool Health",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "datasource": "Prometheus",
+          "targets": [{"expr": "zfs_pool_health{pool=~\"$pool\"}", "legendFormat": "{{pool}}"}],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                {"type": "value", "options": {"0": {"text": "ONLINE", "color": "green"}}},
+                {"type": "range", "options": {"from": 1, "to": 999, "result": {"text": "DEGRADED", "color": "red"}}}
+              ],
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+            }
+          }
+        },
+        {
+          "title": "Pool Usage %",
+          "type": "gauge",
+          "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0},
+          "datasource": "Prometheus",
+          "targets": [{"expr": "zfs_pool_allocated_bytes{pool=~\"$pool\"} / zfs_pool_size_bytes{pool=~\"$pool\"}", "legendFormat": "{{pool}}"}],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.7}, {"color": "orange", "value": 0.8}, {"color": "red", "value": 0.9}]}
+            }
+          }
+        },
+        {
+          "title": "Pool Size vs Allocated",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "datasource": "Prometheus",
+          "targets": [
+            {"expr": "zfs_pool_size_bytes{pool=~\"$pool\"}", "legendFormat": "{{pool}} total"},
+            {"expr": "zfs_pool_allocated_bytes{pool=~\"$pool\"}", "legendFormat": "{{pool}} used"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}}
+        },
+        {
+          "title": "Free Space",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "datasource": "Prometheus",
+          "targets": [
+            {"expr": "zfs_pool_size_bytes{pool=~\"$pool\"} - zfs_pool_allocated_bytes{pool=~\"$pool\"}", "legendFormat": "{{pool}} free"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "bytes"}}
+        },
+        {
+          "title": "I/O Errors (rate/10m)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "datasource": "Prometheus",
+          "targets": [
+            {"expr": "rate(zfs_pool_read_errors_total{pool=~\"$pool\"}[10m])", "legendFormat": "{{pool}} read errors"},
+            {"expr": "rate(zfs_pool_write_errors_total{pool=~\"$pool\"}[10m])", "legendFormat": "{{pool}} write errors"},
+            {"expr": "rate(zfs_pool_checksum_errors_total{pool=~\"$pool\"}[10m])", "legendFormat": "{{pool}} cksum errors"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "ops"}}
+        },
+        {
+          "title": "Last Scrub Age",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+          "datasource": "Prometheus",
+          "targets": [{"expr": "time() - zfs_pool_scrub_last_finish_seconds{pool=~\"$pool\"}", "legendFormat": "{{pool}}"}],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        },
+        {
+          "title": "Fragmentation %",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "datasource": "Prometheus",
+          "targets": [{"expr": "zfs_pool_fragmentation_percent{pool=~\"$pool\"}", "legendFormat": "{{pool}}"}],
+          "fieldConfig": {"defaults": {"unit": "percent", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 50}, {"color": "red", "value": 70}]}}}
+        }
+      ],
+      "time": {"from": "now-24h", "to": "now"}
+    }

@@ -1,0 +1,23 @@
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: flux-failures
+  namespace: flux-system
+spec:
+  providerRef:
+    name: telegram
+  # info | error
+  eventSeverity: error
+  eventSources:
+    - kind: GitRepository
+      name: "*"
+    - kind: Kustomization
+      name: "*"
+    - kind: HelmRepository
+      name: "*"
+    - kind: HelmRelease
+      name: "*"
+  # Riduci rumore: ignora eventi Normal di routine
+  exclusionList:
+    - "waiting.*retrying"
+    - "Health check passed"

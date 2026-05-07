@@ -1,0 +1,93 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: traefik
+      version: 37.3.0
+      sourceRef:
+        kind: HelmRepository
+        name: traefik
+        namespace: flux-system
+  upgrade:
+    crds: Skip
+    remediation:
+      retries: 3
+  install:
+    crds: Skip
+  values:
+
+    logs:
+      general:
+        level: WARN
+
+    access:
+    # -- To enable access logs
+      enabled: true
+
+    crds:
+      enabled: false  # CRDs managed by infrastructure/crds/gateway-api
+
+    deployment:
+      replicas: 2
+
+    providers:
+      kubernetesGateway:
+        enabled: true
+      kubernetesIngress:
+        enabled: false
+      kubernetesCRD:
+        enabled: true
+        allowCrossNamespace: true
+
+    ports:
+      web:
+        port: 8000
+        exposedPort: 80
+        # HTTP→HTTPS redirect (v34+ syntax)
+        redirections:
+          entryPoint:
+            to: websecure
+            scheme: https
+      websecure:
+        port: 8443
+        exposedPort: 443
+        tls:
+          enabled: true
+        transport:
+          respondingTimeouts:
+            readTimeout: 600s
+            idleTimeout: 600s
+            writeTimeout: 600s
+        middlewares: []
+
+    ingressRoute:
+      dashboard:
+        enabled: true
+        # Custom match rule with host domain
+        matchRule: Host(`traefik.${DOMAIN}`)
+        entryPoints: ["websecure"]
+        middlewares:
+          - name: traefik-authentik-forward-auth@kubernetescrd
+
+    # Allow the Gateway to expose HTTPRoute from all namespaces
+    gateway:
+      namespacePolicy: All
+
+    service:
+      annotations:
+        metallb.io/ip-allocated-from-pool: external-pool
+        metallb.io/allow-shared-ip: external-pool
+        metallb.io/loadBalancerIPs: 192.168.178.10
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi

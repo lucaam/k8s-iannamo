@@ -1,0 +1,40 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: trek
+  namespace: trek
+spec:
+  interval: 5m
+  timeout: 15m
+  chart:
+    spec:
+      chart: ./charts/trek
+      sourceRef:
+        kind: GitRepository
+        name: trek
+        namespace: flux-system
+  values:
+    image:
+      repository: mauriceboe/trek
+      tag: 3.0.16
+      pullPolicy: Always
+
+    service:
+      type: ClusterIP
+      port: 3000
+
+    env:
+      NODE_ENV: production
+      PORT: 3000
+      ALLOWED_ORIGINS: "https://trek.${DOMAIN}"
+      OIDC_ADMIN_CLAIM: "trip admins"
+
+    existingSecret: trek-secret
+    existingSecretKey: JWT_SECRET
+
+    persistence:
+      # PVCs are managed by Kustomize (pvc.yaml) with ReadWriteMany.
+      # The chart's pvc.yaml template is broken (hardcodes RWO, ignores
+      # existingClaim/accessMode). Disable to stop chart from creating PVCs.
+      # The deployment template still mounts trek-data and trek-uploads.
+      enabled: false

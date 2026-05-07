@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tado-proxy-config
+  namespace: tado-proxy
+data:
+  # Configurazioni di base per PocketBase
+  PB_BIND_ADDR: "0.0.0.0:8080"
+  PB_ENCRYPTION_KEY: ""  # Aggiungi una chiave per la produzione!

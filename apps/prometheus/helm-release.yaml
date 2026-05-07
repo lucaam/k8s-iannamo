@@ -1,0 +1,117 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: prometheus
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "72.6.2"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+  # Upgrade strategy: ricreare le risorse se cambiano i selector
+  # (necessario per StatefulSet di Prometheus/Alertmanager se modifichiamo storage)
+  install:
+    crds: Skip
+    timeout: 10m
+  upgrade:
+    crds: Skip
+    timeout: 10m
+    remediation:
+      retries: 3
+  values:
+    # Grafana è gestita separatamente in apps/grafana
+    grafana:
+      enabled: false
+
+    # ----------------------------------------------------------------
+    # Prometheus
+    # ----------------------------------------------------------------
+    prometheus:
+      prometheusSpec:
+        # Permette di scrapare ServiceMonitor in qualsiasi namespace,
+        # non solo quelli con il label `release: kube-prometheus-stack`
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
+        probeSelectorNilUsesHelmValues: false
+
+        # Retention dati
+        retention: 30d
+        retentionSize: "18GB"
+
+        # Persistenza su NFS-flash (SSD ZFS pool)
+        # Crea automaticamente PVC `prometheus-kube-prometheus-stack-prometheus-db-...`
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              accessModes: ["ReadWriteOnce"]
+              storageClassName: nfs-flash
+              resources:
+                requests:
+                  storage: 20Gi
+
+        # Lasciamo headroom prima di kill OOM
+        resources:
+          requests:
+            cpu: 200m
+            memory: 1Gi
+          limits:
+            cpu: 1500m
+            memory: 3Gi
+
+    # ----------------------------------------------------------------
+    # Alertmanager — config completa nel Secret SOPS "alertmanager-config"
+    # (contiene bot_token, chat_id, routing — tutto cifrato)
+    # ----------------------------------------------------------------
+    alertmanager:
+      enabled: true
+      alertmanagerSpec:
+        # L'intera configurazione Alertmanager viene dal Secret
+        # "alertmanager-config" (chiave: alertmanager.yaml).
+        configSecret: alertmanager-config
+
+        retention: 168h  # 7 giorni di storia notifiche
+        storage:
+          volumeClaimTemplate:
+            spec:
+              accessModes: ["ReadWriteOnce"]
+              storageClassName: nfs-flash
+              resources:
+                requests:
+                  storage: 2Gi
+
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+
+    # ----------------------------------------------------------------
+    # Componenti accessori
+    # ----------------------------------------------------------------
+    kubeStateMetrics:
+      enabled: true
+
+    nodeExporter:
+      enabled: true
+
+    # ----------------------------------------------------------------
+    # Talos Linux: these components don't expose metrics in the
+    # standard way. Disable their ServiceMonitors to avoid
+    # TargetDown/KubeProxyDown false positives.
+    # ----------------------------------------------------------------
+    kubeProxy:
+      enabled: false
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeEtcd:
+      enabled: false

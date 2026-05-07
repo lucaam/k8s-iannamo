@@ -1,0 +1,326 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gatus
+  namespace: gatus
+data:
+  config.yaml: |-
+    # Gatus configuration with OIDC authentication
+    storage:
+      type: storage
+
+    metrics: true
+
+    security:
+      oidc:
+        issuer-url: "https://auth.${DOMAIN}/application/o/gatus/"
+        redirect-url: "https://gatus.${DOMAIN}/authorization-code/callback"
+        client-id: "$${OIDC_CLIENT_ID}"
+        client-secret: "$${OIDC_CLIENT_SECRET}"
+        scopes: ["openid"]
+
+    alerting:
+      telegram:
+        token: "${TELEGRAM_BOT_TOKEN}"
+        id: "${TELEGRAM_CHAT_ID}"
+        default-alert:
+          description: "health check failed"
+          send-on-resolved: true
+          failure-threshold: 3
+          success-threshold: 4
+
+    # UI Configuration
+    ui:
+      title: "Services Status"
+      header: "Monitoring Infrastructure"
+
+    endpoints:
+      # ========================================
+      # 🌐 SERVIZI PUBBLICI (HTTPS)
+      # ========================================
+      - name: "Authentik SSO"
+        group: "Public Services"
+        url: "https://auth.${DOMAIN}"
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[RESPONSE_TIME] < 3000"
+        alerts:
+          - type: telegram
+
+      - name: "Gatus Dashboard"
+        group: "Public Services"
+        url: "https://gatus.${DOMAIN}"
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[RESPONSE_TIME] < 2000"
+        alerts:
+          - type: telegram
+
+      - name: "Home Assistant"
+        group: "Public Services"
+        url: "https://home.${DOMAIN}"
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[RESPONSE_TIME] < 3000"
+        alerts:
+          - type: telegram
+
+      - name: "Immich Photos"
+        group: "Public Services"
+        url: "https://immich.${DOMAIN}"
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[RESPONSE_TIME] < 4000"
+        alerts:
+          - type: telegram
+
+      - name: "Kubernetes Dashboard"
+        group: "Public Services"
+        url: "https://kubernetes.${DOMAIN}"
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[RESPONSE_TIME] < 3000"
+        alerts:
+          - type: telegram
+
+      # ========================================
+      # 🚦 GATEWAY & INGRESS
+      # ========================================
+      - name: "Traefik Gateway"
+        group: "Gateway"
+        url: "http://traefik.traefik.svc.cluster.local:80"
+        interval: 30s
+        conditions:
+          - "[CONNECTED] == true"
+          - "[RESPONSE_TIME] < 300"
+        alerts:
+          - type: telegram
+
+      - name: "Traefik LoadBalancer"
+        group: "Gateway"
+        url: "http://traefik.traefik.svc.cluster.local"
+        interval: 30s
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      # ========================================
+      # 🔐 AUTHENTICATION & AUTHORIZATION
+      # ========================================
+      - name: "Authentik Server"
+        group: "Auth"
+        url: "http://authentik-server.authentik.svc.cluster.local"
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+          - "[RESPONSE_TIME] < 1000"
+        alerts:
+          - type: telegram
+
+      - name: "Authentik Outpost"
+        group: "Auth"
+        url: "http://ak-outpost-authentik-embedded-outpost.authentik.svc.cluster.local:9000/outpost.goauthentik.io/ping"
+        interval: 1m
+        conditions:
+          - "[STATUS] == 204"
+          - "[RESPONSE_TIME] < 1000"
+        alerts:
+          - type: telegram
+
+      - name: "Authentik PostgreSQL"
+        group: "Auth"
+        url: "tcp://authentik-postgresql.authentik.svc.cluster.local:5432"
+        interval: 2m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      # ========================================
+      # 🏠 HOME AUTOMATION
+      # ========================================
+      - name: "Home Assistant Internal"
+        group: "Home Automation"
+        url: "http://home-assistant.home-assistant.svc.cluster.local:8080"
+        interval: 1m
+        conditions:
+          - "[CONNECTED] == true"
+          - "[RESPONSE_TIME] < 2000"
+        alerts:
+          - type: telegram
+
+      - name: "MQTT Mosquitto"
+        group: "Home Automation"
+        url: "tcp://mosquitto.mqtt.svc.cluster.local:1883"
+        interval: 1m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      - name: "Zigbee2MQTT"
+        group: "Home Automation"
+        url: "http://zigbee2mqtt.zigbee2mqtt.svc.cluster.local:8080"
+        interval: 2m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      - name: "Ikea Obegraensad"
+        group: "Home Automation"
+        url: "http://ikea-led.lan/api/info"
+        interval: 2m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+            failure-threshold: 20
+
+      - name: "Tado API Proxy"
+        group: "Home Automation"
+        url: "http://tado-api-proxy.tado-proxy.svc.cluster.local:8080"
+        interval: 2m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      # ========================================
+      # 📸 IMMICH
+      # ========================================
+      - name: "Immich Server"
+        group: "Immich"
+        url: "http://immich-server.immich.svc.cluster.local:2283"
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+          - "[RESPONSE_TIME] < 2000"
+        alerts:
+          - type: telegram
+
+      - name: "Immich Machine Learning"
+        group: "Immich"
+        url: "http://immich-machine-learning.immich.svc.cluster.local:3003/ping"
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+        alerts:
+          - type: telegram
+
+      - name: "Immich PostgreSQL"
+        group: "Immich"
+        url: "tcp://immich-pg-rw.immich.svc.cluster.local:5432"
+        interval: 2m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      - name: "Immich Valkey (Redis)"
+        group: "Immich"
+        url: "tcp://immich-valkey.immich.svc.cluster.local:6379"
+        interval: 2m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      # ========================================
+      # ☸️ KUBERNETES CORE
+      # ========================================
+      # - name: "Kubernetes API"
+      #   group: "Cluster Core"
+      #   url: "https://kubernetes.default.svc.cluster.local/healthz"
+      #   interval: 30s
+      #   client:
+      #     insecure: true
+      #   conditions:
+      #     - "[STATUS] == 200"
+      #     - "[BODY] == ok"
+      #     - "[RESPONSE_TIME] < 500"
+
+      - name: "CoreDNS"
+        group: "Cluster Core"
+        url: "udp://kube-dns.kube-system.svc.cluster.local:53"
+        interval: 1m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      # ========================================
+      # 🔧 INFRASTRUCTURE
+      # ========================================
+      - name: "Cert-Manager"
+        group: "Infrastructure"
+        url: "http://cert-manager.cert-manager.svc.cluster.local:9402/metrics"
+        interval: 5m
+        conditions:
+          - "[STATUS] == 200"
+        alerts:
+          - type: telegram
+
+      - name: "Cert-Manager Webhook"
+        group: "Infrastructure"
+        url: "http://cert-manager-webhook.cert-manager.svc.cluster.local:443"
+        interval: 5m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      - name: "MetalLB Controller"
+        group: "Infrastructure"
+        url: "http://metallb-webhook-service.metallb.svc.cluster.local:443"
+        interval: 5m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      - name: "CNPG Controller"
+        group: "Infrastructure"
+        url: "http://cnpg-webhook-service.cnpg-system.svc.cluster.local:443"
+        interval: 5m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      # ========================================
+      # 🌍 EXTERNAL DEPENDENCIES
+      # ========================================
+      - name: "Internet (Cloudflare DNS)"
+        group: "External"
+        url: "https://1.1.1.1"
+        interval: 5m
+        conditions:
+          - "[STATUS] == 200"
+          - "[RESPONSE_TIME] < 2000"
+
+      - name: "GitHub"
+        group: "External"
+        url: "https://github.com"
+        interval: 5m
+        conditions:
+          - "[STATUS] == 200"
+          - "[RESPONSE_TIME] < 3000"
+
+      - name: "Docker Hub"
+        group: "External"
+        url: "https://hub.docker.com"
+        interval: 10m
+        conditions:
+          - "[STATUS] == 200"

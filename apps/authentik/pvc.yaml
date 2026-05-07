@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authentik-media
+  namespace: authentik
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nfs-spacex
+
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authentik-certs
+  namespace: authentik
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: nfs-spacex
+    
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authentik-templates
+  namespace: authentik
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: nfs-spacex

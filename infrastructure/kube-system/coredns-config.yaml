@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        log . {
+            class error
+        }
+        prometheus :9153
+
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+
+        forward . 192.168.178.1 1.1.1.1 8.8.8.8 {
+           max_concurrent 1000
+           policy round_robin
+           health_check 5s
+           expire 10s
+        }
+
+        cache 300 {
+           success 10000
+           denial 5000
+           prefetch 10 1m 10%
+        }
+
+        loop
+        reload
+        loadbalance
+    }
+
+    lan:53 {
+        errors
+        cache 120
+
+        forward . 192.168.178.1 {
+           max_concurrent 1000
+           prefer_udp
+           health_check 5s
+           expire 10s
+        }
+
+        reload
+        log . {
+            class error
+        }
+    }
