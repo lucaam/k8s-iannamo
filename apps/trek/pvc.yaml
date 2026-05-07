@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trek-data
+  namespace: trek
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-flash
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trek-uploads
+  namespace: trek
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-flash
+  resources:
+    requests:
+      storage: 20Gi

@@ -1,0 +1,144 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cluster-health
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: nodes
+      rules:
+        - alert: NodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Nodo {{ $labels.node }} NotReady"
+            description: "Il nodo non è Ready da oltre 5m."
+
+        - alert: NodeMemoryHigh
+          expr: |
+            (1 - node_memory_MemAvailable_bytes
+                  / node_memory_MemTotal_bytes) > 0.90
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Nodo {{ $labels.instance }} sopra il 90% di memoria"
+
+        - alert: NodeFilesystemAlmostFull
+          expr: |
+            (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) < 0.10
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Filesystem {{ $labels.mountpoint }} su {{ $labels.instance }} sotto il 10%"
+
+        - alert: NodeFilesystemCritical
+          expr: |
+            (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) < 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Filesystem {{ $labels.mountpoint }} su {{ $labels.instance }} sotto il 5%"
+
+        - alert: NodeCpuSaturated
+          expr: |
+            (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.90
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Nodo {{ $labels.instance }} sopra il 90% CPU per 30m"
+
+        - alert: NodeClockSkew
+          expr: abs(node_timex_offset_seconds) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Clock skew sul nodo {{ $labels.instance }}"
+
+    - name: workload
+      rules:
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} in crash loop"
+
+        - alert: PodNotReady
+          expr: |
+            sum by (namespace, pod) (
+              kube_pod_status_phase{phase=~"Pending|Unknown|Failed"}
+            ) > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} non Ready da 30m"
+
+        - alert: DeploymentReplicasMismatch
+          expr: |
+            kube_deployment_spec_replicas
+              != kube_deployment_status_replicas_available
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} ha repliche disponibili insufficienti"
+
+        - alert: StatefulSetReplicasMismatch
+          expr: |
+            kube_statefulset_status_replicas_ready
+              != kube_statefulset_status_replicas
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} repliche non Ready"
+
+    - name: certificates
+      rules:
+        - alert: CertManagerCertExpiringSoon
+          expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 60 * 60 * 24 * 14
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Certificato {{ $labels.namespace }}/{{ $labels.name }} scade in <14 giorni"
+
+        - alert: CertManagerCertNotReady
+          expr: certmanager_certificate_ready_status{condition="True"} == 0
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Certificato {{ $labels.namespace }}/{{ $labels.name }} non Ready"
+
+    - name: meta
+      rules:
+        - alert: ScrapeTargetDown
+          # job critici: kubelet, node-exporter, ZFS, kube-state-metrics
+          expr: up{job=~"kubelet|node-exporter|proxmox-zfs-exporter|kube-state-metrics"} == 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Scrape target {{ $labels.job }} ({{ $labels.instance }}) down"
+
+        - alert: AlertmanagerConfigInconsistent
+          expr: count by (service) (alertmanager_config_hash) > 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Configurazioni Alertmanager non sincronizzate tra repliche"

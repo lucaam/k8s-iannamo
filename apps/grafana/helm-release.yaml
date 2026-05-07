@@ -1,0 +1,66 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: grafana
+  namespace: grafana
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: grafana
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: flux-system
+  values:
+    admin:
+      existingSecret: grafana-admin
+    service:
+      type: ClusterIP
+    persistence:
+      enabled: true
+      existingClaim: grafana-storage
+    # OIDC / Generic OAuth (Authentik) configuration
+    grafana.ini:
+      server:
+          root_url: https://grafana.${DOMAIN}
+      auth.generic_oauth:
+        enabled: true
+        name: Authentik
+        allow_sign_up: true
+        scopes: openid profile email
+        # Replace the URLs below with your Authentik endpoints
+        auth_url: "https://auth.${DOMAIN}/application/o/authorize/"
+        token_url: "https://auth.${DOMAIN}/application/o/token/"
+        api_url: "https://auth.${DOMAIN}/application/o/userinfo/"
+        # Map a claim from the OIDC userinfo/token to a Grafana org role.
+        # Adjust the expression below according to the claim Authentik sends (e.g. `groups`).
+        # Example: if Authentik includes a `groups` array and you create a group
+        # `monitoring-admin`, this expression assigns Grafana `Admin` to members,
+        # otherwise assigns `Editor` so users can create dashboards.
+        role_attribute_path: "contains(groups, 'monitoring admins') && 'Admin' || contains(groups, 'monitoring editors') && 'Editor' || 'Viewer'"        
+    envValueFrom:
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID:
+        secretKeyRef:
+          name: grafana-oidc
+          key: client-id
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
+        secretKeyRef:
+          name: grafana-oidc
+          key: client-secret
+
+    # Redirect URI to register in Authentik:
+    # https://grafana.${DOMAIN}/login/generic_oauth
+
+
+    # Provision Prometheus datasource so dashboards can use it
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            access: proxy
+            url: http://kube-prometheus-stack-prometheus.prometheus.svc.cluster.local:9090
+            isDefault: true
+            version: 1

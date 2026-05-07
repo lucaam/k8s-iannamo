@@ -1,0 +1,20 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: external-pool
+  namespace: metallb
+spec:
+  addresses:
+    - 192.168.178.10-192.168.178.40
+---
+
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: external-pool
+  namespace: metallb
+spec:
+  ipAddressPools:
+    - external-pool
+  interfaces:
+    - eth0

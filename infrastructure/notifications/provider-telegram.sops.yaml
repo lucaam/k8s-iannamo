@@ -1,0 +1,26 @@
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+    name: telegram
+    namespace: flux-system
+spec:
+    type: ENC[AES256_GCM,data:e+kmwVE0nGM=,iv:r+guCzOq0E/GU4Q4FQD+EtuUsgSSYI/R5CW3nKK/qGA=,tag:C/CJ5y68FUTbOzllUDXX6w==,type:str]
+    channel: ENC[AES256_GCM,data:xEdZFdDRiUA=,iv:kx2mkSfz+DED2uS/fwg7XuyWWay+0x5JA+MRvTmON48=,tag:t3F01SH6fp8EOuKyM7YpIQ==,type:str]
+    address: ENC[AES256_GCM,data:78qN8FQYc7XbQ4PZrzAPuMI1KSrBS/2G,iv:WoCSl7KcwLOiX3COudq9WEUlkJL+COqiR76I/62UteM=,tag:0idCYHxmyr3B3oeLcRp0Dg==,type:str]
+    secretRef:
+        name: ENC[AES256_GCM,data:eTdw5N4QjOdAQO6y,iv:sScmVfMwA3+FB9tw0e42QuSTdBNHAFftHKYt8dtiHtU=,tag:oUCxdxmP0NLacQ2d71keuA==,type:str]
+sops:
+    age:
+        - recipient: age1tsc9gq8u66ufrv526fsvahg88pd030t42xe4msc4cm2z84dtke2qpwjnwd
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsWUxYbW1QNEpFU2VRbHhU
+            S3hLMlhOMjcwcUsrUnNKRTR6eGd4ZFl5cmpvCk9QeXNselp6SGpxbFlQbmFZZnp0
+            VlJRdEpUTThMa29mb0MxRXdHUzZxYzgKLS0tIEZFbUQvMWpBUmtHc2lKRlZtbFo5
+            OEZqUUFjK0lUa3kwc3U0RjlrOTNDRm8KdFu/+y7N1EmHtrJ91xDm/uvnsi+P9iki
+            PajDRoeEIl/W41osddd4p2wcXkgsyT2Er2JTeaF9NPEG+R10m4M5mw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-05-06T14:23:11Z"
+    mac: ENC[AES256_GCM,data:WWSNUWdK9qENB26GyRU0TYzoc33jqY/gI5qjdV0gTDo1dom45BQPnJMsj5x1h2etv43U7Cw2Sy9FVPCnopdlnzx4PzsSbd/arYCXPNTORaivx5h1B9w8kcV4NIzSbpgpTXdFRwWEKSB7VIjEr+JbqifXwc1oc1SGahkASD1gHAc=,iv:ntiMccRlY7UFw262L+v5abCr7+g+O8zJIt/zoLUrqUY=,tag:IMpCZKuCOlIITQD72l7+Xg==,type:str]
+    encrypted_regex: ^(spec)$
+    version: 3.11.0

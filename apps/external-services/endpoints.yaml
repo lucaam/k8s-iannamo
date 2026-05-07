@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: external-http
+  namespace: external-services
+subsets:
+  - addresses:
+      - ip: 192.168.178.185
+    ports:
+      - name: http
+        port: 8080
+        protocol: TCP

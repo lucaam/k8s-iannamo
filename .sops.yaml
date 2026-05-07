@@ -1,0 +1,16 @@
+creation_rules:
+  - path_regex: infrastructure/.*/secret-.*\.sops\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age:
+      - age1tsc9gq8u66ufrv526fsvahg88pd030t42xe4msc4cm2z84dtke2qpwjnwd
+
+  - path_regex: infrastructure/notifications/provider-telegram\.sops\.yaml$
+    encrypted_regex: ^(spec)$
+    age:
+      - age1tsc9gq8u66ufrv526fsvahg88pd030t42xe4msc4cm2z84dtke2qpwjnwd
+
+  # Secret Authentik ed eventuali altri
+  - path_regex: apps/.*/secret-.*\.sops\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age:
+      - age1tsc9gq8u66ufrv526fsvahg88pd030t42xe4msc4cm2z84dtke2qpwjnwd

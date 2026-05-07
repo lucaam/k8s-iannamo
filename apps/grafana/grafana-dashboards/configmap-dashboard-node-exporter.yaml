@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-node-exporter
+  namespace: grafana
+  labels:
+    grafana_dashboard: "1"
+data:
+  node-exporter-overview.json: |-
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {"defaults": {},"overrides": []},
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+          "id": 1,
+          "options": {},
+          "targets": [{"expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)","refId": "A"}],
+          "title": "Node CPU Utilization (%)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "fieldConfig": {"defaults": {},"overrides": []},
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+          "id": 2,
+          "options": {},
+          "targets": [{"expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes","refId": "A"}],
+          "title": "Node Memory Used (bytes)",
+          "type": "timeseries"
+        }
+      ],
+      "schemaVersion": 30,
+      "style": "dark",
+      "tags": ["node","exporter"],
+      "templating": {"list": []},
+      "time": {"from": "now-6h","to": "now"},
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Node Exporter — Overview",
+      "uid": "node-exporter-overview",
+      "version": 1
+    }

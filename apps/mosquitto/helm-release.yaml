@@ -1,0 +1,177 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: mosquitto
+  namespace: mqtt
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: mosquitto
+      version: "0.6.1"
+      sourceRef:
+        kind: HelmRepository
+        name: mosquitto
+        namespace: flux-system
+  values:
+
+
+    service:
+      type: LoadBalancer
+      # Service annotations for load balancer configuration
+      annotations:
+        metallb.io/ip-allocated-from-pool: external-pool
+        metallb.io/allow-shared-ip: external-pool
+        metallb.io/loadBalancerIPs: 192.168.178.12
+        # MetalLB examples:
+        # metallb.universe.tf/loadBalancerIPs: "192.168.1.100"
+        # metallb.universe.tf/address-pool: "production-public-ips"
+        # Traefik examples:
+        # traefik.ingress.kubernetes.io/service.loadbalancer.method: "drr"
+        # Cloud provider examples:
+        # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        # service.beta.kubernetes.io/azure-load-balancer-resource-group: "myResourceGroup"
+      # LoadBalancer configuration (for MetalLB, cloud providers, etc.)
+      # External traffic policy for LoadBalancer and NodePort
+      externalTrafficPolicy: Cluster
+      # Session affinity for service
+      sessionAffinity: None
+      # MQTT broker ports
+      ports:
+        mqtt:
+          enabled: true
+          port: 1883
+          targetPort: 1883
+          protocol: TCP
+          # NodePort for NodePort service type (leave empty for auto-assignment)
+          nodePort: ""
+        websocket:
+          enabled: false
+          port: 9001
+          targetPort: 9001
+          protocol: TCP
+          # NodePort for NodePort service type (leave empty for auto-assignment)
+          nodePort: ""
+
+    # Host networking configuration
+    hostNetwork:
+      # Enable host networking (pod uses host's network namespace)
+      enabled: false
+      # DNS policy when using host networking
+      dnsPolicy: ClusterFirstWithHostNet
+
+    # Host port configuration (alternative to hostNetwork)
+    hostPorts:
+      # Enable binding to host ports
+      enabled: false
+      # Host ports configuration
+      mqtt:
+        # Host port for MQTT (leave empty to disable)
+        port: ""
+        # Host IP to bind to (empty = all interfaces)
+        hostIP: ""
+      mqttTls:
+        # Host port for MQTT TLS (leave empty to disable)
+        port: ""
+        # Host IP to bind to (empty = all interfaces)
+        hostIP: ""
+      websocket:
+        # Host port for WebSocket (leave empty to disable)
+        port: ""
+        # Host IP to bind to (empty = all interfaces)
+        hostIP: ""
+
+    ingress:
+      # Only needed for WebSocket connections (HTTP-based MQTT)
+      # Traditional MQTT (TCP) should use LoadBalancer or NodePort service type
+      enabled: false
+      className: ""
+      annotations: {}
+      hosts:
+        - host: mosquitto.local
+          paths:
+            - path: /mqtt
+              pathType: Prefix
+              service:
+                name: websocket  # Only websocket port is HTTP-compatible
+
+    # Resource limits and requests
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+    # Health checks
+    livenessProbe:
+      tcpSocket:
+        port: mqtt
+      initialDelaySeconds: 30
+      periodSeconds: 10
+    readinessProbe:
+      tcpSocket:
+        port: mqtt
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+
+    # Mosquitto configuration
+    config:
+      # Allow anonymous connections (automatically disabled if users are defined)
+      allowAnonymous: true
+      # Log level: error, warning, notice, information, subscribe, unsubscribe, websockets, none, all
+      logLevel: information
+      # Maximum concurrent client connections (0 = unlimited)
+      maxConnections: 0
+      # Additional custom configuration
+      extraConfig: ""
+
+    # Authentication configuration
+    auth:
+      # Reference to existing secret containing password file
+      # If set, this takes precedence over auth.users
+      secretRef:
+        # Name of the secret containing the password file
+        name: "mqtt-auth"
+        # Key in the secret containing the password file content
+        # Defaults to "passwd" if not specified
+        key: "passwd"
+
+      # Access Control Lists (ACL file format)
+      # Multi-line string in Mosquitto ACL file format
+      # Topics before first "user" line apply to anonymous clients (if allow_anonymous true)
+      # Use "pattern" keyword for rules that apply to all authenticated users
+      # See https://mosquitto.org/man/mosquitto-conf-5.html for full ACL syntax
+      acls: ""
+        # acls: |
+        #   # Anonymous user topics (only if allow_anonymous true)
+        #   topic read public/#
+        #   topic read status/#
+        #
+        #   # Pattern rules apply to all authenticated users
+        #   pattern readwrite devices/%u/#
+        #
+        #   # User-specific topics
+        #   user admin
+        #   topic readwrite #
+        #
+        #   user sensor1
+        #   topic write sensors/sensor1/data
+        #   topic read sensors/sensor1/commands
+
+    persistence:
+      enabled: true
+      # Storage class for PVC
+      # Set to "-" to disable dynamic provisioning and use default storage class
+      # Set to "" to use cluster default storage class
+      storageClass: "nfs-spacex"
+      accessModes:
+        - ReadWriteMany
+      size: 1Gi
+      # Use an existing PVC instead of creating a new one
+      # If defined, PVC must be created manually before volume will be bound
+      # existingClaim:
+      # Annotations for PVC
+      annotations: {}

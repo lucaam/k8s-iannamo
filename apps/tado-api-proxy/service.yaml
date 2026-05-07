@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tado-api-proxy
+  namespace: tado-proxy
+  annotations:
+    metallb.io/ip-allocated-from-pool: external-pool
+    metallb.io/allow-shared-ip: external-pool  # Se vuoi condividere l'IP con altri servizi
+    metallb.io/loadBalancerIPs: 192.168.178.13  # Scegli un IP diverso da Home Assistant
+spec:
+  selector:
+    app: tado-api-proxy
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+      protocol: TCP
+  type: LoadBalancer

@@ -1,0 +1,138 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: zfs-and-storage
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    # ------------------------------------------------------------------
+    # ZFS pools su Proxmox (host: 192.168.178.162, exporter :9134)
+    # Metriche: zfs_pool_health, zfs_pool_allocated_bytes,
+    #           zfs_pool_size_bytes, zfs_pool_*_errors
+    # ------------------------------------------------------------------
+    - name: zfs.proxmox
+      rules:
+        - alert: ZfsExporterDown
+          expr: up{job="proxmox-zfs-exporter"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "ZFS exporter su Proxmox non risponde"
+            description: "L'exporter su 192.168.178.162:9134 è down da oltre 5m. Niente visibilità sui pool ZFS."
+
+        - alert: ZfsPoolNotHealthy
+          # 0 = ONLINE; qualsiasi altro valore = DEGRADED/FAULTED/UNAVAIL
+          expr: zfs_pool_health != 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pool ZFS {{ $labels.pool }} non in stato ONLINE"
+            description: "Stato corrente: {{ $value }}. Controllare `zpool status` su Proxmox."
+
+        - alert: ZfsPoolErrors
+          expr: |
+            increase(zfs_pool_checksum_errors_total[10m]) > 0
+            or increase(zfs_pool_read_errors_total[10m]) > 0
+            or increase(zfs_pool_write_errors_total[10m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Errori I/O sul pool ZFS {{ $labels.pool }}"
+            description: "Rilevati errori CKSUM/READ/WRITE negli ultimi 10m. Disco in degrado?"
+
+        - alert: ZfsPoolNearFull
+          expr: (zfs_pool_allocated_bytes / zfs_pool_size_bytes) > 0.80
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pool ZFS {{ $labels.pool }} oltre l'80% di occupazione"
+            description: "Uso attuale: {{ $value | humanizePercentage }}. Pianificare cleanup o espansione."
+
+        - alert: ZfsPoolCritical
+          expr: (zfs_pool_allocated_bytes / zfs_pool_size_bytes) > 0.90
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pool ZFS {{ $labels.pool }} oltre il 90% — rischio imminente"
+            description: "Uso attuale: {{ $value | humanizePercentage }}. ZFS degrada bruscamente sopra il 90%."
+
+        - alert: ZfsScrubOverdue
+          # nessuno scrub da oltre 35 giorni
+          expr: (time() - zfs_pool_scrub_last_finish_seconds) > 60 * 60 * 24 * 35
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Scrub ZFS in ritardo per il pool {{ $labels.pool }}"
+            description: "Ultimo scrub completato {{ $value | humanizeDuration }} fa. Esegui `zpool scrub {{ $labels.pool }}`."
+
+    # ------------------------------------------------------------------
+    # PVC riempimento (visto dal kubelet)
+    # ------------------------------------------------------------------
+    - name: pvc.fill
+      rules:
+        - alert: PvcAlmostFull
+          expr: |
+            (kubelet_volume_stats_available_bytes
+              / kubelet_volume_stats_capacity_bytes) < 0.15
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} sotto il 15% libero"
+            description: "Spazio libero: {{ $value | humanizePercentage }}."
+
+        - alert: PvcCritical
+          expr: |
+            (kubelet_volume_stats_available_bytes
+              / kubelet_volume_stats_capacity_bytes) < 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} quasi pieno"
+            description: "Spazio libero: {{ $value | humanizePercentage }}. Rischio crash dell'applicazione."
+
+        - alert: PvcInodesAlmostFull
+          expr: |
+            (kubelet_volume_stats_inodes_free
+              / kubelet_volume_stats_inodes) < 0.10
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} sotto il 10% di inode liberi"
+
+    # ------------------------------------------------------------------
+    # NFS client su nodi Talos — montaggi verso Proxmox
+    # ------------------------------------------------------------------
+    - name: nfs.client
+      rules:
+        - alert: NfsTimeouts
+          expr: increase(node_nfs_requests_total{status="timeout"}[10m]) > 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Timeout NFS sul nodo {{ $labels.instance }}"
+            description: "Il client NFS sta sperimentando timeout — verifica raggiungibilità di 192.168.178.162 e stato del server NFS."
+
+        - alert: NfsServerUnreachable
+          # Tutti i nodi con NFS mount hanno traffico zero per 30m,
+          # ma ne avevano nell'ultima ora — stallo globale
+          expr: |
+            count(rate(node_nfs_requests_total[5m]) > 0) == 0
+              and count(max_over_time(rate(node_nfs_requests_total[1h])[1h:5m]) > 0) > 0
+          for: 30m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Traffico NFS azzerato su tutti i nodi"
+            description: "Nessun nodo ha traffico NFS da 30m. Verificare raggiungibilità di 192.168.178.162 e stato del server NFS."

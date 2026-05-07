@@ -1,0 +1,505 @@
+# flux/authentik-helmrelease.yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authentik
+  namespace: authentik
+spec:
+  releaseName: authentik
+  chart:
+    spec:
+      chart: authentik
+      version: "2026.2.2"
+      sourceRef:
+        kind: HelmRepository
+        name: authentik
+        namespace: flux-system
+  interval: 1h
+  targetNamespace: authentik
+  values:
+    global:
+      security:
+        allowInsecureImages: true
+    # -- Environment variables to pass to all deployed Deployments. Does not apply to GeoIP
+      # See configuration options at https://goauthentik.io/docs/installation/configuration/
+      # @default -- `[]` (See [values.yaml])
+      env:
+        # - name: AUTHENTIK_VAR_NAME
+        #   value: VALUE
+        - name: AUTHENTIK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: authentik-secrets
+              key: secret-key
+        - name: AUTHENTIK_POSTGRESQL__USER
+          valueFrom:
+            secretKeyRef:
+              name: authentik-secrets
+              key: postgres-username
+        - name: AUTHENTIK_POSTGRESQL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: authentik-secrets
+              key: postgres-password
+        - name: AUTHENTIK_EMAIL__HOST
+          valueFrom:
+            secretKeyRef:
+              name: authentik-secrets
+              key: email-host
+        - name: AUTHENTIK_EMAIL__USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: authentik-secrets
+              key: email-username
+        - name: AUTHENTIK_EMAIL__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: authentik-secrets
+              key: email-password
+        - name: AUTHENTIK_EMAIL__FROM
+          valueFrom:
+            secretKeyRef:
+              name: authentik-secrets
+              key: email-from
+
+      # -- Additional volumeMounts to all deployed Deployments. Does not apply to GeoIP
+      # @default -- `[]` (See [values.yaml])
+      # volumeMounts: []
+        # - name: custom
+        #   mountPath: /custom
+
+      # -- Additional volumes to all deployed Deployments.
+      # @default -- `[]` (See [values.yaml])
+      # volumes: []
+        # - name: custom
+        #   emptyDir: {}
+
+
+    ## Authentik configuration
+    authentik:
+      # -- whether to create the authentik configuration secret
+      enabled: true
+      # -- Log level for server and worker
+      log_level: trace
+      # -- Secret key used for cookie singing and unique user IDs,
+      # don't change this after the first install
+      secret_key: ""
+      events:
+        context_processors:
+          # -- Path for the GeoIP City database. If the file doesn't exist, GeoIP features are disabled.
+          geoip: /geoip/GeoLite2-City.mmdb
+          # -- Path for the GeoIP ASN database. If the file doesn't exist, GeoIP features are disabled.
+          asn: /geoip/GeoLite2-ASN.mmdb
+      web:
+        # -- Relative path the authentik instance will be available at. Value _must_ contain both a leading and trailing slash.
+        path: /
+      email:
+        # -- SMTP Server emails are sent from, fully optional
+        # host: ""
+        # -- SMTP server port
+        port: 587
+        # -- SMTP credentials, when left empty, no authentication will be done
+        # username: ""
+        # -- SMTP credentials, when left empty, no authentication will be done
+        # password: ""
+        # -- Use StartTLS. Enable either use_tls or use_ssl, they can't be enabled at the same time.
+        use_tls: true
+        # -- Use SSL. Enable either use_tls or use_ssl, they can't be enabled at the same time.
+        use_ssl: false
+        # -- Connection timeout
+        timeout: 30
+        # -- Email from address, can either be in the format "foo@bar.baz" or "authentik <foo@bar.baz>"
+        # from: ""
+      outposts:
+        # -- Template used for managed outposts. The following placeholders can be used
+        # %(type)s - the type of the outpost
+        # %(version)s - version of your authentik install
+        # %(build_hash)s - only for beta versions, the build hash of the image
+        container_image_base: ghcr.io/goauthentik/%(type)s:%(version)s
+      error_reporting:
+        # -- This sends anonymous usage-data, stack traces on errors and
+        # performance data to sentry.beryju.org, and is fully opt-in
+        enabled: false
+        # -- This is a string that is sent to sentry with your error reports
+        environment: "k8s"
+        # -- Send PII (Personally identifiable information) data to sentry
+        send_pii: false
+      # postgresql:
+        # -- set the postgresql hostname to talk to
+        # if unset and .Values.postgresql.enabled == true, will generate the default
+        # @default -- `{{ .Release.Name }}-postgresql`
+        # host: "{{ .Release.Name }}-postgresql"
+        # -- postgresql Database name
+        # @default -- `authentik`
+        # name: "authentik"
+        # -- postgresql Username
+        # @default -- `authentik`
+        # user: "authentik"
+        # password: ""
+        # port: 5432
+
+    ## authentik server
+    server:
+      # -- whether to enable server resources
+      enabled: true
+
+      # -- authentik server name
+      name: server
+
+      # -- The number of server pods to run
+      replicas: 1
+
+      # -- Resource limits and requests for server pods
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 200m
+          memory: 512Mi
+
+      # authentik server container ports
+      containerPorts:
+        # -- http container port
+        http: 9000
+        # -- https container port
+        https: 9443
+        # -- metrics container port
+        metrics: 9300
+
+      # -- Host Network for authentik server pods
+      hostNetwork: false
+
+      ## Liveness, readiness and startup probes for authentik server
+      ## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
+      livenessProbe:
+        # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
+        failureThreshold: 3
+        # -- Number of seconds after the container has started before [probe] is initiated
+        initialDelaySeconds: 5
+        # -- How often (in seconds) to perform the [probe]
+        periodSeconds: 10
+        # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
+        successThreshold: 1
+        # -- Number of seconds after which the [probe] times out
+        timeoutSeconds: 3
+        ## Probe configuration
+        httpGet:
+          path: "{{ .Values.authentik.web.path }}-/health/live/"
+          port: http
+
+      readinessProbe:
+        # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
+        failureThreshold: 3
+        # -- Number of seconds after the container has started before [probe] is initiated
+        initialDelaySeconds: 5
+        # -- How often (in seconds) to perform the [probe]
+        periodSeconds: 10
+        # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
+        successThreshold: 1
+        # -- Number of seconds after which the [probe] times out
+        timeoutSeconds: 3
+        ## Probe configuration
+        httpGet:
+          path: "{{ .Values.authentik.web.path }}-/health/ready/"
+          port: http
+
+      startupProbe:
+        # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
+        failureThreshold: 60
+        # -- Number of seconds after the container has started before [probe] is initiated
+        initialDelaySeconds: 5
+        # -- How often (in seconds) to perform the [probe]
+        periodSeconds: 10
+        # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
+        successThreshold: 1
+        # -- Number of seconds after which the [probe] times out
+        timeoutSeconds: 3
+        ## Probe configuration
+        httpGet:
+          path: "{{ .Values.authentik.web.path }}-/health/live/"
+          port: http
+
+      # -- terminationGracePeriodSeconds for container lifecycle hook
+      terminationGracePeriodSeconds: 30
+
+      ## authentik server service configuration
+      service:
+        # -- authentik server service annotations
+        annotations: {}
+        # -- authentik server service labels
+        labels: {}
+        # -- authentik server service type
+        type: ClusterIP
+        # -- authentik server service http port for NodePort service type (only if `server.service.type` is set to `NodePort`)
+        nodePortHttp: 30080
+        # -- authentik server service https port for NodePort service type (only if `server.service.type` is set to `NodePort`)
+        nodePortHttps: 30443
+        # -- authentik server service http port
+        servicePortHttp: 80
+        # -- authentik server service https port
+        servicePortHttps: 443
+        # -- authentik server service http port name
+        servicePortHttpName: http
+        # -- authentik server service https port name
+        servicePortHttpsName: https
+        # -- authentik server service http port appProtocol
+        # servicePortHttpAppProtocol: HTTP
+        # -- authentik server service https port appProtocol
+        # servicePortHttpsAppProtocol: HTTPS
+        # -- LoadBalancer will get created with the IP specified in this field
+        loadBalancerIP: ""
+        # -- Source IP ranges to allow access to service from
+        loadBalancerSourceRanges: []
+        # -- authentik server service external IPs
+        externalIPs: []
+        # -- Denotes if this service desires to route external traffic to node-local or cluster-wide endpoints
+        externalTrafficPolicy: ""
+        # -- Used to maintain session affinity. Supports `ClientIP` and `None`
+        sessionAffinity: ""
+        # -- Session affinity configuration
+        sessionAffinityConfig: {}
+
+      ## authentik server metrics service configuration
+      metrics:
+        # -- deploy metrics service
+        enabled: true
+        service:
+          # -- metrics service type
+          type: ClusterIP
+          # -- metrics service clusterIP. `None` makes a "headless service" (no virtual IP)
+          clusterIP: ""
+          # -- metrics service annotations
+          annotations: {}
+          # -- metrics service labels
+          labels: {}
+          # -- metrics service port
+          servicePort: 9300
+          # -- metrics service port name
+          portName: metrics
+        serviceMonitor:
+          # -- enable a prometheus ServiceMonitor
+          enabled: true
+          # -- Prometheus ServiceMonitor interval
+          interval: 30s
+          # -- Prometheus ServiceMonitor scrape timeout
+          scrapeTimeout: 3s
+          # -- Prometheus [RelabelConfigs] to apply to samples before scraping
+          relabelings: []
+          # -- Prometheus [MetricsRelabelConfigs] to apply to samples before ingestion
+          metricRelabelings: []
+          # -- Prometheus ServiceMonitor selector
+          selector: {}
+            # prometheus: kube-prometheus
+
+          # -- Prometheus ServiceMonitor scheme
+          scheme: ""
+          # -- Prometheus ServiceMonitor tlsConfig
+          tlsConfig: {}
+          # -- Prometheus ServiceMonitor namespace
+          namespace: ""
+          # -- Prometheus ServiceMonitor labels
+          labels: {}
+          # -- Prometheus ServiceMonitor annotations
+          annotations: {}
+
+      ingress:
+        # -- enable an ingress resource for the authentik server
+        enabled: false
+
+
+      route:
+        main:
+          # -- enable an HTTPRoute resource for the authentik server.
+          # Be aware that this is an early beta of this feature. We don't guarantee this works and is subject to change.
+          enabled: true
+          # -- Set the route apiVersion
+          apiVersion: gateway.networking.k8s.io/v1
+          # -- Set the route kind
+          kind: HTTPRoute
+
+          # -- Route annotations
+          annotations: {}
+          # -- Route labels
+          labels: {}
+
+          # -- Route hostnames
+          hostnames:
+            - "auth.${DOMAIN}"
+            - "auth.${DOMAIN}"
+          # -- Reference to parent gateways
+          parentRefs:
+            - name: traefik-gateway
+              namespace: traefik
+              kind: Gateway
+              sectionName: websecure
+
+          # -- Create http route for redirect (https://gateway-api.sigs.k8s.io/guides/http-redirect-rewrite/#http-to-https-redirects).
+          # Take care that you only enable this on the http listener of the gateway to avoid an infinite redirect.
+          # Matches, filters and additionalRules will be ignored if this is set to true
+          httpsRedirect: false
+
+          # -- uses `server.service.servicePortHttps` instead of `server.service.servicePortHttp`
+          https: false
+
+          # -- Route matches
+          matches:
+            - path:
+                type: PathPrefix
+                value: "{{ .Values.authentik.web.path }}"
+
+          # -- Route filters
+          filters: []
+
+          # -- Additional custom rules that can be added to the route
+          additionalRules: []
+
+
+    ## authentik worker
+    worker:
+      # -- whether to enable worker resources
+      enabled: true
+
+      # -- authentik worker name
+      name: worker
+
+      # -- The number of worker pods to run
+      replicas: 1
+
+      # -- Resource limits and requests for the authentik worker
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 200m
+          memory: 512Mi
+
+      # authentik worker container ports
+      containerPorts:
+        # -- http container port
+        http: 9000
+        # -- metrics container port
+        metrics: 9300
+
+      livenessProbe:
+        # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
+        failureThreshold: 3
+        # -- Number of seconds after the container has started before [probe] is initiated
+        initialDelaySeconds: 5
+        # -- How often (in seconds) to perform the [probe]
+        periodSeconds: 10
+        # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
+        successThreshold: 1
+        # -- Number of seconds after which the [probe] times out
+        timeoutSeconds: 3
+        ## Probe configuration
+        exec:
+          command:
+            - ak
+            - healthcheck
+
+      readinessProbe:
+        # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
+        failureThreshold: 3
+        # -- Number of seconds after the container has started before [probe] is initiated
+        initialDelaySeconds: 5
+        # -- How often (in seconds) to perform the [probe]
+        periodSeconds: 10
+        # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
+        successThreshold: 1
+        # -- Number of seconds after which the [probe] times out
+        timeoutSeconds: 3
+        ## Probe configuration
+        exec:
+          command:
+            - ak
+            - healthcheck
+
+      startupProbe:
+        # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
+        failureThreshold: 60
+        # -- Number of seconds after the container has started before [probe] is initiated
+        initialDelaySeconds: 30
+        # -- How often (in seconds) to perform the [probe]
+        periodSeconds: 10
+        # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
+        successThreshold: 1
+        # -- Number of seconds after which the [probe] times out
+        timeoutSeconds: 3
+        ## Probe configuration
+        exec:
+          command:
+            - ak
+            - healthcheck
+
+      # -- terminationGracePeriodSeconds for container lifecycle hook
+      terminationGracePeriodSeconds: 30
+
+
+
+    serviceAccount:
+      # -- Create service account. Needed for managed outposts
+      create: true
+      # -- additional service account annotations
+
+    postgresql:
+      # -- enable the Bitnami PostgreSQL chart. Refer to https://github.com/bitnami/charts/blob/main/bitnami/postgresql/ for possible values.
+      enabled: true
+      image:
+        registry: docker.io
+        repository: library/postgres
+        tag: "17.6-bookworm"
+      auth:
+        database: "authentik"
+        username: "authentik"
+        existingSecret: "authentik-secrets"           # Riferimento al secret
+        secretKeys:
+          userPasswordKey: "postgres-password"      # Key nel secret per la password
+      primary:
+        args:
+          - -c
+          - config_file=/bitnami/postgresql/conf/postgresql.conf
+          - -c
+          - hba_file=/bitnami/postgresql/conf/pg_hba.conf
+        configuration: |
+          listen_addresses = '*'
+          port = '5432'
+          wal_level = 'replica'
+          fsync = 'on'
+          hot_standby = 'on'
+          log_connections = 'false'
+          log_disconnections = 'false'
+          log_hostname = 'false'
+          client_min_messages = 'error'
+          include_dir = 'conf.d'
+        pgHbaConfiguration: |
+          host     all             all             0.0.0.0/0               scram-sha-256
+          host     all             all             ::/0                    scram-sha-256
+          local    all             all                                     scram-sha-256
+          host     all             all        127.0.0.1/32                 scram-sha-256
+          host     all             all        ::1/128                      scram-sha-256
+        extendedConfiguration: |
+          max_connections = 500
+
+        extraEnvVars:
+          - name: POSTGRES_DB
+            value: '{{ (include "postgresql.v1.database" .) }}'
+        persistence:
+          enabled: true
+          storageClass: nfs-flash
+          size: 10Gi
+          accessModes:
+            - ReadWriteMany
+        containerSecurityContext:
+          readOnlyRootFilesystem: false
+      readReplicas:
+        resourcesPreset: "none"
+      backup:
+        resourcesPreset: "none"
+      passwordUpdateJob:
+        resourcesPreset: "none"
+      volumePermissions:
+        resourcesPreset: "none"
+      metrics:
+        resourcesPreset: "none"

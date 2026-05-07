@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: proxmox-zfs-exporter
+  namespace: prometheus
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: proxmox-zfs-exporter
+  namespaceSelector:
+    matchNames:
+      - prometheus
+  endpoints:
+    - port: metrics
+      interval: 30s

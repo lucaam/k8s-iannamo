@@ -1,0 +1,46 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: gatus
+  namespace: gatus
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: gatus
+      sourceRef:
+        kind: HelmRepository
+        name: twin
+        namespace: flux-system
+      version: "1.4.5"
+  values:
+    persistence:
+      enabled: true
+      existingClaim: gatus-data
+      accessModes:
+        - ReadWriteMany
+      storageClassName: nfs-spacex
+      size: 200Mi
+
+    # Service per Gatus
+    service:
+      type: ClusterIP
+      port: 80
+      targetPort: 8080
+
+    externalConfigMap: gatus
+
+    # OIDC values sono app-specific (restano nel secret gatus-secrets).
+    # TELEGRAM è gestito da Flux postBuild.substituteFrom → viene iniettato
+    # direttamente nel ConfigMap al momento dell'apply.
+    env:
+      OIDC_CLIENT_ID:
+        valueFrom:
+          secretKeyRef:
+            name: gatus-secrets
+            key: OIDC_CLIENT_ID
+      OIDC_CLIENT_SECRET:
+        valueFrom:
+          secretKeyRef:
+            name: gatus-secrets
+            key: OIDC_CLIENT_SECRET

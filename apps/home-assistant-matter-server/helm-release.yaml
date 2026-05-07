@@ -1,0 +1,96 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: home-assistant-matter-server
+  namespace: home-assistant-matter-server
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: home-assistant-matter-server
+      version: "3.3.0"
+      sourceRef:
+        kind: HelmRepository
+        name: wittdennis
+        namespace: flux-system
+  values:
+    image:
+      repository: ghcr.io/matter-js/python-matter-server
+      pullPolicy: IfNotPresent
+      tag: "8.1.2"
+
+    log:
+      logLevel: info
+      logLevelSDK: progress
+
+    bluetoothCommissioning:
+      enabled: false
+
+    service:
+      type: LoadBalancer
+      port: 5580
+      annotations:
+        metallb.io/ip-allocated-from-pool: external-pool
+        metallb.io/allow-shared-ip: external-pool
+        metallb.io/loadBalancerIPs: 192.168.178.14
+
+# Enable hostNetwork and hostPort for Matter Server requirements
+    hostNetwork: true
+    hostPort: true
+
+    # Disable chart persistence, use external PVC instead
+    persistence:
+      enabled: false
+
+    additionalVolumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: home-assistant-matter-server-data
+
+    additionalMounts:
+      - name: data
+        mountPath: /data
+
+    podSecurityContext:
+      fsGroup: 1000
+      runAsNonRoot: false
+      runAsUser: 0
+
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false
+
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+    livenessProbe:
+      httpGet:
+        path: /
+        port: http
+      initialDelaySeconds: 30
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    readinessProbe:
+      httpGet:
+        path: /
+        port: http
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+    nodeSelector: {}
+
+    tolerations: []
+
+    affinity: {}
