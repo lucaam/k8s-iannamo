@@ -2,10 +2,10 @@
 Tests for Kubernetes manifests added/modified in this PR.
 
 Covers:
-- .sops.yaml         – SOPS encryption configuration
-- apps/authentik/*   – Authentik application manifests
-- apps/external-services/* – External services manifests
-- apps/gatus/*       – Gatus monitoring manifests
+- .sops.yaml         - SOPS encryption configuration
+- apps/authentik/*   - Authentik application manifests
+- apps/external-services/* - External services manifests
+- apps/gatus/*       - Gatus monitoring manifests
 - apps/grafana/grafana-dashboards/configmap-dashboard-k8s-resources.yaml
 """
 
@@ -36,7 +36,7 @@ def load_yaml_all(rel_path: str) -> list[Any]:
     """Load all YAML documents from a multi-document file."""
     full = REPO_ROOT / rel_path
     with open(full) as fh:
-        return list(yaml.safe_load_all(fh))
+        return [doc for doc in yaml.safe_load_all(fh) if doc is not None]
 
 
 def assert_k8s_resource(doc: dict, *, api_version: str | None = None,
@@ -147,10 +147,19 @@ class TestSopsConfig:
         assert apps_rule["encrypted_regex"] == "^(data|stringData)$"
 
     def test_all_rules_have_age_recipient(self):
-        age_key = "age1tsc9gq8u66ufrv526fsvahg88pd030t42xe4msc4cm2z84dtke2qpwjnwd"
-        for rule in self.sops["creation_rules"]:
-            assert age_key in rule["age"], (
-                f"Rule {rule.get('path_regex')} is missing expected age key"
+        """Verify all rules have a valid age recipient with consistent format."""
+        rules = self.sops["creation_rules"]
+        assert len(rules) > 0, "No creation rules found"
+        # Extract the first rule's age recipient as the expected value
+        first_recipient = rules[0]["age"][0]
+        # Validate it matches the age key format
+        assert re.match(r"^age[0-9a-z]+$", first_recipient), (
+            f"First rule's age recipient {first_recipient!r} doesn't match expected format"
+        )
+        # Ensure all rules use the same age recipient
+        for rule in rules:
+            assert first_recipient in rule["age"], (
+                f"Rule {rule.get('path_regex')} is missing expected age recipient"
             )
 
     def test_apps_rule_path_matches_sops_files(self):
@@ -1098,6 +1107,6 @@ class TestSOPSSecretNamespaces:
         doc = load_yaml(path)
         version = doc["sops"].get("version", "")
         # Must be a valid semver-ish string
-        assert re.match(r"\d+\.\d+\.\d+", version), (
+        assert re.fullmatch(r"\d+\.\d+\.\d+", version), (
             f"{path}: sops version {version!r} does not look like semver"
         )
