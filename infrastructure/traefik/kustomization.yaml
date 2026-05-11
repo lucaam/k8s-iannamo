@@ -7,3 +7,12 @@ resources:
   - helm-repository.yaml
   - helm-release.yaml
   - middleware.yaml
+  - catch-all.yaml
+
+configMapGenerator:
+  - name: traefik-error-pages
+    namespace: traefik
+    files:
+      - error-pages/404.html
+      - error-pages/503.html
+      - error-pages/500.html
