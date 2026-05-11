@@ -95,6 +95,11 @@
 
 <script>
     function goHome() {
+        // Configurable auth host - fallback to current origin for IP addresses and non-standard domains
+        // Can be overridden via <meta name="auth-host" content="https://auth.example.com">
+        const metaAuthHost = document.querySelector('meta[name="auth-host"]');
+        const AUTH_HOST = metaAuthHost ? metaAuthHost.getAttribute('content') : window.location.origin;
+
         const hostname = window.location.hostname;
 
         // Early return if already on auth subdomain to avoid self-redirect
@@ -108,8 +113,8 @@
         const ipv6Pattern = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
 
         if (ipv4Pattern.test(hostname) || ipv6Pattern.test(hostname)) {
-            // IP address detected, use auth subdomain with the IP
-            window.location.href = 'https://auth.' + hostname;
+            // IP address detected, redirect to configured auth host or current origin
+            window.location.href = AUTH_HOST;
             return;
         }
 
@@ -121,18 +126,8 @@
             return;
         }
 
-        // Extract registrable domain (last two labels for most TLDs)
-        // For proper public suffix support, consider using a library in production
-        const baseDomain = parts.slice(-2).join('.');
-
-        // If baseDomain equals hostname, we're already at the apex domain
-        if (baseDomain === hostname) {
-            window.location.href = 'https://auth.' + hostname;
-            return;
-        }
-
-        // Build redirect URL with auth subdomain
-        window.location.href = 'https://auth.' + baseDomain;
+        // Redirect to configured auth host instead of computing base domain
+        window.location.href = AUTH_HOST;
     }
 </script>
 
