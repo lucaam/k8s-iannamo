@@ -254,7 +254,7 @@ class TestAuthentikHelmRepository:
         doc = load_yaml("apps/authentik/helm-repository.yaml")
         assert_k8s_resource(
             doc,
-            api_version="source.toolkit.fluxcd.io/v1beta2",
+            api_version="source.toolkit.fluxcd.io/v1",
             kind="HelmRepository",
             name="authentik",
             namespace="flux-system",
