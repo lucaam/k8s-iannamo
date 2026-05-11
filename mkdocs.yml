@@ -44,12 +44,23 @@ markdown_extensions:
       permalink: true
 
 nav:
-  - Home: index.md
-  - Architettura: architecture.md
-  - Applicazioni: apps.md
-  - Infrastruttura: infrastructure.md
-  - Storage: storage.md
-  - Networking: networking.md
-  - Sicurezza & Secret: security.md
-  - Monitoraggio & Alert: monitoring.md
-  - Operazioni: operations.md
+  - ITA 🇮🇹:
+      - Home: index.md
+      - Architettura: architecture.md
+      - Applicazioni: apps.md
+      - Infrastruttura: infrastructure.md
+      - Storage: storage.md
+      - Networking: networking.md
+      - Sicurezza & Secret: security.md
+      - Monitoraggio & Alert: monitoring.md
+      - Operazioni: operations.md
+  - ENG 🇬🇧:
+      - Home: index.en.md
+      - Architecture: architecture.en.md
+      - Applications: apps.en.md
+      - Infrastructure: infrastructure.en.md
+      - Storage: storage.en.md
+      - Networking: networking.en.md
+      - Security & Secrets: security.en.md
+      - Monitoring & Alerting: monitoring.en.md
+      - Operations: operations.en.md
