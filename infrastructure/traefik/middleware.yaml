@@ -78,7 +78,7 @@ spec:
               mountPath: /usr/share/nginx/html
           livenessProbe:
             httpGet:
-              path: /
+              path: /404.html
               port: 80
               scheme: HTTP
             initialDelaySeconds: 10
@@ -88,7 +88,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /
+              path: /404.html
               port: 80
               scheme: HTTP
             initialDelaySeconds: 5
