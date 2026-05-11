@@ -154,7 +154,7 @@ spec:
           ls -l /config/configuration.yaml.*
           echo "The current configuration file will be merged with the default configuration file with this content:"
           cat /config-templates/configuration.yaml
-          if [[ ! -s /config/configuration.yaml ]]; then
+          if [ ! -s /config/configuration.yaml ]; then
             # If /config/configuration.yaml is empty, use the content of /config-templates/configuration.yaml
             cat /config-templates/configuration.yaml > /config/configuration.yaml
           else

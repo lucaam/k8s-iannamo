@@ -95,8 +95,43 @@
 
 <script>
     function goHome() {
-        const parts = window.location.hostname.split('.');
+        const hostname = window.location.hostname;
+
+        // Early return if already on auth subdomain to avoid self-redirect
+        if (hostname.startsWith('auth.')) {
+            window.location.href = window.location.origin + '/';
+            return;
+        }
+
+        // Check for IP addresses (IPv4 or IPv6)
+        const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+        const ipv6Pattern = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+
+        if (ipv4Pattern.test(hostname) || ipv6Pattern.test(hostname)) {
+            // IP address detected, use auth subdomain with the IP
+            window.location.href = 'https://auth.' + hostname;
+            return;
+        }
+
+        const parts = hostname.split('.');
+
+        // Single-label hostname (e.g., "localhost") - fallback to current origin
+        if (parts.length === 1) {
+            window.location.href = window.location.origin + '/';
+            return;
+        }
+
+        // Extract registrable domain (last two labels for most TLDs)
+        // For proper public suffix support, consider using a library in production
         const baseDomain = parts.slice(-2).join('.');
+
+        // If baseDomain equals hostname, we're already at the apex domain
+        if (baseDomain === hostname) {
+            window.location.href = 'https://auth.' + hostname;
+            return;
+        }
+
+        // Build redirect URL with auth subdomain
         window.location.href = 'https://auth.' + baseDomain;
     }
 </script>
