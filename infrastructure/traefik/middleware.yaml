@@ -1,4 +1,21 @@
-# flux/authentik-policy.yaml
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-errors
+  namespace: traefik
+spec:
+  errors:
+    status:
+      - "404"
+      - "503"
+      - "500"
+    service:
+      name: traefik-error-service
+      port: 80
+    query: /{status}.html
+
+---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -20,3 +37,73 @@ spec:
       - "X-authentik-meta-provider"
       - "X-authentik-meta-app"
       - "X-authentik-meta-version"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-error-service
+  namespace: traefik
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  selector:
+    app: traefik-error-pages
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traefik-error-pages
+  namespace: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik-error-pages
+  template:
+    metadata:
+      labels:
+        app: traefik-error-pages
+    spec:
+      containers:
+        - name: http-server
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: error-pages
+              mountPath: /usr/share/nginx/html
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+      volumes:
+        - name: error-pages
+          configMap:
+            name: traefik-error-pages

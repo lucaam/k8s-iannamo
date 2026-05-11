@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: home-assistant
-      version: "0.3.56"
+      version: "0.3.58"
       sourceRef:
         kind: HelmRepository
         name: home-assistant
@@ -21,7 +21,7 @@ spec:
       # Image pull policy
       pullPolicy: IfNotPresent
       # Overrides the image tag whose default is the chart appVersion.
-      tag: "2026.5.0"
+      tag: "2026.5.1"
     # Environment variables
     env: []
     # Use environment variables from ConfigMaps or Secrets
@@ -130,7 +130,7 @@ spec:
       # Script is executed before the Home Assistant container starts and is used to prepare the configuration
       # Will be executed only if the configuration.enabled is set to true
       initScript: |-
-        #!/bin/bash
+        #!/bin/sh
         set -e
 
         # Check if the configuration file exists
@@ -154,7 +154,7 @@ spec:
           ls -l /config/configuration.yaml.*
           echo "The current configuration file will be merged with the default configuration file with this content:"
           cat /config-templates/configuration.yaml
-          if [[ ! -s /config/configuration.yaml ]]; then
+          if [ ! -s /config/configuration.yaml ]; then
             # If /config/configuration.yaml is empty, use the content of /config-templates/configuration.yaml
             cat /config-templates/configuration.yaml > /config/configuration.yaml
           else
@@ -183,12 +183,12 @@ spec:
         fi
       initContainer:
         name: setup-config
-        image: mikefarah/yq:4.53.2
+        image: mikefarah/yq:4.44.2
         securityContext:
           runAsUser: 0
-        command: ["/bin/bash", "-c"]
+        command: ["/bin/sh", "-c"]
         args:
-          - /bin/bash /mnt/init/init.sh
+          - /bin/sh /mnt/init/init.sh
         # env:
         # - name: FORCE_INIT
         #   valueFrom:

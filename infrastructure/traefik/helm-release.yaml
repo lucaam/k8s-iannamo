@@ -26,11 +26,10 @@ spec:
         level: WARN
 
     access:
-    # -- To enable access logs
       enabled: true
 
     crds:
-      enabled: false  # CRDs managed by infrastructure/crds/gateway-api
+      enabled: false
 
     deployment:
       replicas: 2
@@ -48,7 +47,6 @@ spec:
       web:
         port: 8000
         exposedPort: 80
-        # HTTP→HTTPS redirect (v34+ syntax)
         redirections:
           entryPoint:
             to: websecure
@@ -63,18 +61,18 @@ spec:
             readTimeout: 600s
             idleTimeout: 600s
             writeTimeout: 600s
-        middlewares: []
+        middlewares:
+          - traefik-traefik-errors@kubernetescrd   # gestisce 500/503 su tutte le route
 
     ingressRoute:
       dashboard:
         enabled: true
-        # Custom match rule with host domain
         matchRule: Host(`traefik.${DOMAIN}`)
         entryPoints: ["websecure"]
         middlewares:
-          - name: traefik-authentik-forward-auth@kubernetescrd
+          - name: authentik-forward-auth
+          - name: traefik-errors
 
-    # Allow the Gateway to expose HTTPRoute from all namespaces
     gateway:
       namespacePolicy: All
 
