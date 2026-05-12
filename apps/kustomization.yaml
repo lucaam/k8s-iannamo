@@ -13,3 +13,4 @@ resources:
   - grafana
   - external-services
   - trek
+  - social-media-reuploader

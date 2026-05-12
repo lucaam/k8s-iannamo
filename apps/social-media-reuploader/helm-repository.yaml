@@ -1,0 +1,10 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: social-media-reuploader
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://github.com/lucaam/social-media-reuploader
+  ref:
+    branch: main
