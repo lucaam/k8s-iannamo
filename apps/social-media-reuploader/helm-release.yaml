@@ -41,9 +41,12 @@ spec:
         secretKeyRef:
           name: social-media-reuploader-secret
           key: BOT_TOKEN
-      TMP_DIR: /tmp/telegram_downloader
-      TELEGRAM_MAX_FILE_SIZE: 52428800
-      WORKERS: 2
+    - name: TMP_DIR
+      value: "/tmp/telegram_downloader"
+    - name: TELEGRAM_MAX_FILE_SIZE
+      value: "52428800"
+    - name: WORKERS
+      value: "2"
     gui:
       enabled: true
       useSecret: true
