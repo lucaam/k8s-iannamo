@@ -45,14 +45,6 @@ spec:
       enabled: true
       useSecret: true
       secretName: social-media-reuploader-gui-secret
-      secrets:
-        adminToken: ""
-        secretKey: ""
-        oauthClientId: ""
-        oauthClientSecret: ""
-        oauthAuthorizeUrl: ""
-        oauthTokenUrl: ""
-        oauthUserinfoUrl: ""
       image:
         repository: ghcr.io/lucaam/social-media-reuploader
         tag: latest
