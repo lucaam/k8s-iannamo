@@ -5,6 +5,7 @@ metadata:
   namespace: tado-proxy
   labels:
     app: tado-api-proxy
+    app.kubernetes.io/name: tado-api-proxy
 spec:
   replicas: 1
   selector:
@@ -14,6 +15,7 @@ spec:
     metadata:
       labels:
         app: tado-api-proxy
+        app.kubernetes.io/name: tado-api-proxy
     spec:
       securityContext:
         runAsUser: 1000

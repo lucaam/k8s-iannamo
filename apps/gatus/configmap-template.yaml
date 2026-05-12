@@ -3,6 +3,11 @@ kind: ConfigMap
 metadata:
   name: gatus
   namespace: gatus
+  labels:
+    app.kubernetes.io/name: gatus
+  annotations: {}
+  # Required metadata for validation
+  # app.kubernetes.io/name label added
 data:
   config.yaml: |-
     # Gatus configuration with OIDC authentication

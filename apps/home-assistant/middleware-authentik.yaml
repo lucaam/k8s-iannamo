@@ -3,6 +3,8 @@ kind: Middleware
 metadata:
   name: authentik-forward-auth
   namespace: home-assistant
+  labels:
+    app.kubernetes.io/name: home-assistant
 spec:
   forwardAuth:
     address: http://ak-outpost-authentik-embedded-outpost.authentik:9000/outpost.goauthentik.io/auth/traefik

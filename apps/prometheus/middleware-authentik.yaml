@@ -3,6 +3,8 @@ kind: Middleware
 metadata:
   name: authentik-forward-auth
   namespace: prometheus
+  labels:
+    app.kubernetes.io/name: authentik-forward-auth
 spec:
   forwardAuth:
     address: http://ak-outpost-authentik-embedded-outpost.authentik:9000/outpost.goauthentik.io/auth/traefik

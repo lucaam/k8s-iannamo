@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: tado-proxy-config
   namespace: tado-proxy
+  labels:
+    app.kubernetes.io/name: tado-api-proxy
 data:
   # Configurazioni di base per PocketBase
   PB_BIND_ADDR: "0.0.0.0:8080"

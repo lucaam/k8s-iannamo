@@ -5,6 +5,7 @@ metadata:
   namespace: prometheus
   labels:
     release: kube-prometheus-stack
+    app.kubernetes.io/name: cluster-health
 spec:
   groups:
     - name: nodes

@@ -5,6 +5,7 @@ metadata:
   namespace: grafana
   labels:
     grafana_dashboard: "1"
+    app.kubernetes.io/name: grafana
 data:
   node-exporter-overview.json: |-
     {
