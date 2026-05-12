@@ -5,6 +5,7 @@ metadata:
   namespace: tado-proxy
   labels:
     release: prometheus
+    app.kubernetes.io/name: tado-api-proxy
 spec:
   selector:
     matchLabels:

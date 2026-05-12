@@ -5,6 +5,10 @@ metadata:
   namespace: gatus
   labels:
     release: prometheus
+    app.kubernetes.io/name: gatus
+  annotations: {}
+  # Required metadata for validation
+  # app.kubernetes.io/name label added
 spec:
   selector:
     matchLabels:

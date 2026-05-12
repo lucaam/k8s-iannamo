@@ -5,6 +5,7 @@ metadata:
   namespace: prometheus
   labels:
     release: prometheus
+    app.kubernetes.io/name: prometheus
 spec:
   selector:
     matchLabels:

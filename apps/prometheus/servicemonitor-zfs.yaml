@@ -5,6 +5,7 @@ metadata:
   namespace: prometheus
   labels:
     release: prometheus
+    app.kubernetes.io/name: proxmox-zfs-exporter
 spec:
   selector:
     matchLabels:

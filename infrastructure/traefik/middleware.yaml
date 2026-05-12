@@ -4,6 +4,8 @@ kind: Middleware
 metadata:
   name: traefik-errors
   namespace: traefik
+  labels:
+    app.kubernetes.io/name: traefik
 spec:
   errors:
     status:
@@ -21,6 +23,8 @@ kind: Middleware
 metadata:
   name: authentik-forward-auth
   namespace: traefik
+  labels:
+    app.kubernetes.io/name: traefik
 spec:
   forwardAuth:
     address: http://ak-outpost-authentik-embedded-outpost.authentik:9000/outpost.goauthentik.io/auth/traefik
@@ -44,6 +48,8 @@ kind: Service
 metadata:
   name: traefik-error-service
   namespace: traefik
+  labels:
+    app.kubernetes.io/name: traefik
 spec:
   ports:
     - name: http
@@ -58,6 +64,8 @@ kind: Deployment
 metadata:
   name: traefik-error-pages
   namespace: traefik
+  labels:
+    app.kubernetes.io/name: traefik
 spec:
   replicas: 1
   selector:

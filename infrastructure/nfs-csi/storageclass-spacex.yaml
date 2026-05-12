@@ -4,6 +4,8 @@ metadata:
   name: nfs-spacex
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
+  labels:
+    app.kubernetes.io/name: nfs-csi
 provisioner: nfs.csi.k8s.io
 parameters:
   server: 192.168.178.162         # IP Proxmox

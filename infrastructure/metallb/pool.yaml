@@ -3,6 +3,8 @@ kind: IPAddressPool
 metadata:
   name: external-pool
   namespace: metallb
+  labels:
+    app.kubernetes.io/name: metallb
 spec:
   addresses:
     - 192.168.178.10-192.168.178.40
@@ -13,6 +15,8 @@ kind: L2Advertisement
 metadata:
   name: external-pool
   namespace: metallb
+  labels:
+    app.kubernetes.io/name: metallb
 spec:
   ipAddressPools:
     - external-pool
