@@ -3,6 +3,8 @@ kind: HelmRelease
 metadata:
   name: trek
   namespace: trek
+  labels:
+    app.kubernetes.io/name: trek
 spec:
   interval: 5m
   timeout: 15m
@@ -27,19 +29,7 @@ spec:
       NODE_ENV: production
       PORT: 3000
       ALLOWED_ORIGINS: "https://trek.${DOMAIN}"
-      APP_URL: "https://trek.${DOMAIN}"
-      FORCE_HTTPS: "true"
-      TRUST_PROXY: "1"
-      # MCP Configuration
-      MCP_RATE_LIMIT: "300"
-      MCP_MAX_SESSION_PER_USER: "20"
-      # OIDC/OAuth2 Configuration
       OIDC_ADMIN_CLAIM: "trip admins"
-      # Add these when you have Authentik configured:
-      # OIDC_ISSUER: "https://auth.${DOMAIN}"
-      # OIDC_CLIENT_ID: "trek"
-      # OIDC_DISCOVERY_URL: "https://auth.${DOMAIN}/application/o/.well-known/openid-configuration"
-      # OIDC_SCOPE: "openid email profile groups"
 
     existingSecret: trek-secret
     existingSecretKey: JWT_SECRET

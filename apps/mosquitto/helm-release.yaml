@@ -3,6 +3,11 @@ kind: HelmRelease
 metadata:
   name: mosquitto
   namespace: mqtt
+  labels:
+    app.kubernetes.io/name: mosquitto
+  annotations: {}
+  # Required metadata for validation
+  # app.kubernetes.io/name label added
 spec:
   interval: 5m
   chart:

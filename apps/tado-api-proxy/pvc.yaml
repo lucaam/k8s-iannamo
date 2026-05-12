@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: tado-proxy-data
   namespace: tado-proxy
+  labels:
+    app.kubernetes.io/name: tado-api-proxy
 spec:
   accessModes:
     - ReadWriteMany

@@ -4,3 +4,8 @@ resources:
   - secret-telegram.yaml
   - provider-telegram.sops.yaml
   - alert-flux.yaml
+metadata:
+  name: notifications
+  labels:
+    app.kubernetes.io/name: notifications
+  annotations: {}

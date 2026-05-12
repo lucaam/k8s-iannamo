@@ -4,3 +4,4 @@ metadata:
   name: nfs-csi
   labels:
     pod-security.kubernetes.io/enforce: privileged
+    app.kubernetes.io/name: nfs-csi

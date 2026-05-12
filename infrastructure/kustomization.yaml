@@ -8,3 +8,8 @@ resources:
   - traefik
   - kube-system
   - notifications
+metadata:
+  name: infrastructure
+  labels:
+    app.kubernetes.io/name: infrastructure
+  annotations: {}

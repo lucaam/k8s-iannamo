@@ -6,3 +6,8 @@ resources:
   - helm-release.yaml
   - storageclass-flash.yaml
   - storageclass-spacex.yaml
+metadata:
+  name: nfs-csi
+  labels:
+    app.kubernetes.io/name: nfs-csi
+  annotations: {}

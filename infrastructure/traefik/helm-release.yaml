@@ -3,6 +3,8 @@ kind: HelmRelease
 metadata:
   name: traefik
   namespace: traefik
+  labels:
+    app.kubernetes.io/name: traefik
 spec:
   interval: 10m
   chart:
@@ -57,6 +59,10 @@ spec:
         tls:
           enabled: true
         transport:
+          # NOTE: Extended timeouts (600s) are intentional to support
+          # long-lived connections (websockets/large uploads). If you do
+          # not require such use-cases, consider reducing these values
+          # to safer defaults (readTimeout: 60s, idleTimeout: 180s).
           respondingTimeouts:
             readTimeout: 600s
             idleTimeout: 600s

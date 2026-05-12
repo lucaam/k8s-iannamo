@@ -7,3 +7,8 @@ resources:
   - secret-cloudflare.sops.yaml
   - cluster-issuer.yaml
   - certificate-wildcard.yaml
+metadata:
+  name: cert-manager
+  labels:
+    app.kubernetes.io/name: cert-manager
+  annotations: {}

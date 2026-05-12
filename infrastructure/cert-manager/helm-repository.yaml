@@ -3,6 +3,8 @@ kind: HelmRepository
 metadata:
   name: cert-manager
   namespace: flux-system
+  labels:
+    app.kubernetes.io/name: cert-manager
 spec:
   interval: 1h
   url: https://charts.jetstack.io

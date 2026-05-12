@@ -1,6 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+metadata:
+  name: crds
+  labels:
+    app.kubernetes.io/name: crds
+  annotations: {}
 resources:
-  - namespace.yaml
-  - gateway-api
-  - cnpg
+  - gateway-api/namespace.yaml
+  - gateway-api/crds.yaml
+  - cnpg/namespace.yaml
+  - cnpg/crds.yaml

@@ -5,3 +5,8 @@ resources:
   - helm-repository.yaml
   - helm-release.yaml
   - pool.yaml
+metadata:
+  name: metallb
+  labels:
+    app.kubernetes.io/name: metallb
+  annotations: {}

@@ -3,6 +3,8 @@ kind: HelmRelease
 metadata:
   name: metallb
   namespace: metallb
+  labels:
+    app.kubernetes.io/name: metallb
 spec:
   interval: 10m
   chart:

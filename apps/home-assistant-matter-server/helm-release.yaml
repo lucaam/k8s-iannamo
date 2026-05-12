@@ -3,6 +3,8 @@ kind: HelmRelease
 metadata:
   name: home-assistant-matter-server
   namespace: home-assistant-matter-server
+  labels:
+    app.kubernetes.io/name: home-assistant-matter-server
 spec:
   interval: 15m
   chart:

@@ -5,3 +5,8 @@ resources:
   - secret-zigbee2mqtt.sops.yaml
   - helm-release.yaml
   - helm-repository.yaml
+metadata:
+  name: zigbee2mqtt
+  labels:
+    app.kubernetes.io/name: zigbee2mqtt
+  annotations: {}

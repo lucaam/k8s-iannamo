@@ -4,3 +4,4 @@ metadata:
   name: tado-proxy
   labels:
     name: tado-proxy
+    app.kubernetes.io/name: tado-proxy
