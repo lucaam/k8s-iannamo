@@ -4,6 +4,8 @@ kind: HelmRepository
 metadata:
   name: home-assistant
   namespace: flux-system
+  labels:
+    app.kubernetes.io/name: home-assistant
 spec:
   interval: 1h
   url: http://pajikos.github.io/home-assistant-helm-chart

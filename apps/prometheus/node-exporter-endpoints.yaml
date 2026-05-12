@@ -3,6 +3,8 @@ kind: Endpoints
 metadata:
   name: proxmox-node-exporter
   namespace: prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
 subsets:
   - addresses:
       - ip: 192.168.178.162

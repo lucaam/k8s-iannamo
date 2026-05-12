@@ -4,6 +4,8 @@ kind: HelmRepository
 metadata:
   name: zigbee2mqtt
   namespace: flux-system
+  labels:
+    app.kubernetes.io/name: zigbee2mqtt
 spec:
   interval: 1h
   url: https://charts.zigbee2mqtt.io/

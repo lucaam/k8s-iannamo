@@ -5,6 +5,7 @@ metadata:
   namespace: prometheus
   labels:
     app: proxmox-node-exporter
+    app.kubernetes.io/name: proxmox-node-exporter
 spec:
   ports:
     - name: metrics

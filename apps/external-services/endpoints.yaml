@@ -3,6 +3,8 @@ kind: Endpoints
 metadata:
   name: external-http
   namespace: external-services
+  labels:
+    app.kubernetes.io/name: external-services
 subsets:
   - addresses:
       - ip: 192.168.178.185

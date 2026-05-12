@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: trek-data
   namespace: trek
+  labels:
+    app.kubernetes.io/name: trek
 spec:
   accessModes:
     - ReadWriteMany
@@ -16,6 +18,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: trek-uploads
   namespace: trek
+  labels:
+    app.kubernetes.io/name: trek
 spec:
   accessModes:
     - ReadWriteMany

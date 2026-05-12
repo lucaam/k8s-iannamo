@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: tado-api-proxy
   namespace: tado-proxy
+  labels:
+    app.kubernetes.io/name: tado-api-proxy
   annotations:
     metallb.io/ip-allocated-from-pool: external-pool
     metallb.io/allow-shared-ip: external-pool  # Se vuoi condividere l'IP con altri servizi

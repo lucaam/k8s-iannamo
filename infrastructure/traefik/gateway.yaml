@@ -3,6 +3,8 @@ kind: Gateway
 metadata:
   name: traefik-gateway
   namespace: traefik
+  labels:
+    app.kubernetes.io/name: traefik
 spec:
   gatewayClassName: traefik
   listeners:

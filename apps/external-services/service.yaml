@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: external-http
   namespace: external-services
+  labels:
+    app.kubernetes.io/name: external-services
 spec:
   type: ClusterIP
   ports:

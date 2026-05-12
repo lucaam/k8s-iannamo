@@ -9,6 +9,12 @@ resources:
   - middleware.yaml
   - catch-all.yaml
 
+metadata:
+  name: traefik
+  labels:
+    app.kubernetes.io/name: traefik
+  annotations: {}
+
 configMapGenerator:
   - name: traefik-error-pages
     namespace: traefik

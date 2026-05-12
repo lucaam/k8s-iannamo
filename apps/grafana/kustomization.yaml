@@ -9,3 +9,8 @@ resources:
   - grafana-dashboards
   - helm-release.yaml
   - httproute.yaml
+metadata:
+  name: grafana
+  labels:
+    app.kubernetes.io/name: grafana
+  annotations: {}

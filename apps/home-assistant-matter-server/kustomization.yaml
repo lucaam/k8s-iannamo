@@ -6,3 +6,8 @@ resources:
   - pvc.yaml
   - helm-repository.yaml
   - helm-release.yaml
+metadata:
+  name: home-assistant-matter-server
+  labels:
+    app.kubernetes.io/name: home-assistant-matter-server
+  annotations: {}

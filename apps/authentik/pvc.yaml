@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: authentik-media
   namespace: authentik
+  labels:
+    app.kubernetes.io/name: authentik
 spec:
   accessModes:
     - ReadWriteMany
@@ -13,11 +15,15 @@ spec:
 
 
 ---
+
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: authentik-certs
   namespace: authentik
+  labels:
+    app.kubernetes.io/name: authentik
 spec:
   accessModes:
     - ReadWriteMany
@@ -28,11 +34,15 @@ spec:
     
 
 ---
+
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: authentik-templates
   namespace: authentik
+  labels:
+    app.kubernetes.io/name: authentik
 spec:
   accessModes:
     - ReadWriteMany

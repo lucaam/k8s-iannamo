@@ -3,6 +3,8 @@ kind: HelmRepository
 metadata:
   name: wittdennis
   namespace: flux-system
+  labels:
+    app.kubernetes.io/name: home-assistant-matter-server
 spec:
   interval: 1h
   url: https://charts.derwitt.dev

@@ -3,6 +3,8 @@ kind: Cluster
 metadata:
   name: immich-pg
   namespace: immich
+  labels:
+    app.kubernetes.io/name: immich
 spec:
   imageName: tensorchord/cloudnative-vectorchord:17-0.4.3
   instances: 2
@@ -37,6 +39,8 @@ kind: Database
 metadata:
   name: immich
   namespace: immich
+  labels:
+    app.kubernetes.io/name: immich
 spec:
   name: immich
   owner: immich

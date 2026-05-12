@@ -17,6 +17,7 @@ from typing import Any, Iterator
 
 import pytest
 import yaml
+import glob
 
 REPO_ROOT = Path(__file__).parent.parent
 
@@ -398,6 +399,78 @@ class TestAuthentikHTTPRoute:
         assert any("*." in h for h in hostnames)
 
 
+# ---------------------------------------------------------------------------
+# Additional generic checks (Flux / ExtensionRef / HelmRelease consistency)
+# ---------------------------------------------------------------------------
+
+
+class TestFluxHelmReleaseConsistency:
+    """Generic checks across all `helm-release.yaml` files to catch common
+    Flux/HelmRelease misconfigurations that might not be covered by file-
+    specific tests.
+    """
+
+    def test_all_helmreleases_have_source_ref_and_namespace(self):
+        """Every HelmRelease should declare `spec.chart.spec.sourceRef` with
+        at least `kind` and `name`. If referencing a `HelmRepository`, a
+        `namespace` must also be provided (Flux expects the source namespace).
+        """
+        for path in REPO_ROOT.rglob("**/helm-release.yaml"):
+            rel = path.relative_to(REPO_ROOT).as_posix()
+            docs = load_yaml_all(rel)
+            for doc in docs:
+                if not isinstance(doc, dict):
+                    continue
+                if doc.get("kind") != "HelmRelease":
+                    continue
+                spec = doc.get("spec") or {}
+                chart = spec.get("chart")
+                assert chart is not None, f"{rel}: missing spec.chart"
+                chart_spec = chart.get("spec") if isinstance(chart, dict) else None
+                assert chart_spec is not None, (
+                    f"{rel}: missing spec.chart.spec (chart metadata)"
+                )
+                source_ref = chart_spec.get("sourceRef")
+                assert source_ref and isinstance(source_ref, dict), (
+                    f"{rel}: missing spec.chart.spec.sourceRef"
+                )
+                assert "kind" in source_ref and "name" in source_ref, (
+                    f"{rel}: sourceRef must contain kind and name"
+                )
+                if source_ref.get("kind") == "HelmRepository":
+                    assert "namespace" in source_ref, (
+                        f"{rel}: HelmRepository sourceRef must include namespace"
+                    )
+
+
+class TestHTTPRouteExtensionRefGeneric:
+    """Generic checks over HTTPRoute resources to ensure ExtensionRef
+    entries include the `group` attribute (required by Gateway API
+    consumers like Traefik) and are well-formed.
+    """
+
+    def test_httproutes_extensionref_have_group(self):
+        """Scan all `httproute.yaml` files and assert any `ExtensionRef`
+        filter contains a `group` field.
+        """
+        for path in REPO_ROOT.rglob("**/httproute.yaml"):
+            rel = path.relative_to(REPO_ROOT).as_posix()
+            docs = load_yaml_all(rel)
+            for doc in docs:
+                if not isinstance(doc, dict):
+                    continue
+                if doc.get("kind") != "HTTPRoute":
+                    continue
+                spec = doc.get("spec", {})
+                for rule in spec.get("rules", []):
+                    for _filter in rule.get("filters", []):
+                        if _filter.get("type") == "ExtensionRef":
+                            ext = _filter.get("extensionRef") or {}
+                            assert "group" in ext, (
+                                f"{rel}: ExtensionRef missing 'group' in rule"
+                            )
+
+
 class TestAuthentikKustomization:
     def setup_method(self):
         self.doc = load_yaml("apps/authentik/kustomization.yaml")
@@ -472,7 +545,7 @@ class TestAuthentikSOPSSecret:
     def test_sops_age_recipient_present(self):
         age_list = self.doc["sops"]["age"]
         assert len(age_list) >= 1
-        assert "recipient" in age_list[0]
+        assert age_list[0].startswith("age")
 
 
 # ===========================================================================
@@ -1110,3 +1183,153 @@ class TestSOPSSecretNamespaces:
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), (
             f"{path}: sops version {version!r} does not look like semver"
         )
+
+
+# ==========================================================================
+# Cross-cutting: ConfigMap key validation
+# ==========================================================================
+
+def is_valid_configmap_key(key: str) -> bool:
+    return bool(re.match(r'^[-._a-zA-Z0-9]+$', key))
+
+@pytest.mark.parametrize("cm_path", glob.glob(str(REPO_ROOT / "**/configmap*.yaml"), recursive=True))
+def test_configmap_keys_are_valid(cm_path):
+    """All ConfigMap keys must be valid (no /, only [-._a-zA-Z0-9]+)."""
+    docs = load_yaml_all(os.path.relpath(cm_path, REPO_ROOT))
+    for doc in docs:
+        if doc and doc.get("kind") == "ConfigMap":
+            for key in doc.get("data", {}):
+                assert is_valid_configmap_key(key), f"Invalid ConfigMap key: {key} in {cm_path}"
+
+
+# ==========================================================================
+# Cross-cutting: All YAMLs are valid K8s resources
+# ==========================================================================
+
+def all_yaml_files():
+    for path in glob.glob(str(REPO_ROOT / "apps/**/*.yaml"), recursive=True):
+        yield os.path.relpath(path, REPO_ROOT)
+    for path in glob.glob(str(REPO_ROOT / "infrastructure/**/*.yaml"), recursive=True):
+        yield os.path.relpath(path, REPO_ROOT)
+
+@pytest.mark.parametrize("yaml_path", list(all_yaml_files()))
+def test_yaml_is_valid_k8s_resource(yaml_path):
+    """Each YAML must be a valid K8s resource (apiVersion, kind, metadata)."""
+    try:
+        docs = load_yaml_all(yaml_path)
+    except (yaml.YAMLError, FileNotFoundError, OSError) as e:
+        pytest.fail(f"YAML parse error in {yaml_path}: {e}")
+    for doc in docs:
+        if not isinstance(doc, dict):
+            continue
+        assert "apiVersion" in doc, f"Missing apiVersion in {yaml_path}"
+        assert "kind" in doc, f"Missing kind in {yaml_path}"
+        assert "metadata" in doc, f"Missing metadata in {yaml_path}"
+        assert "name" in doc["metadata"], f"Missing metadata.name in {yaml_path}"
+
+
+# ==========================================================================
+# Cross-cutting: No duplicate YAML keys
+# ==========================================================================
+
+def yaml_no_duplicate_keys(loader, node, deep=False):
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in mapping:
+            raise yaml.constructor.ConstructorError(f"Duplicate key: {key}")
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+def test_no_duplicate_yaml_keys():
+    # Use a custom Loader class to avoid mutating the global SafeLoader
+    class NoDuplicateLoader(yaml.SafeLoader):
+        pass
+
+    NoDuplicateLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, yaml_no_duplicate_keys
+    )
+
+    for yaml_path in all_yaml_files():
+        with open(REPO_ROOT / yaml_path) as fh:
+            try:
+                # Use the isolated loader to detect duplicate keys per-file
+                list(yaml.load_all(fh, Loader=NoDuplicateLoader))
+            except yaml.constructor.ConstructorError as e:
+                pytest.fail(f"Duplicate key in {yaml_path}: {e}")
+
+
+# ==========================================================================
+# Cross-cutting: All container images must not use 'latest' tag
+# ==========================================================================
+@pytest.mark.parametrize("yaml_path", list(all_yaml_files()))
+def test_no_latest_tag_in_images(yaml_path):
+    docs = load_yaml_all(yaml_path)
+    for doc in docs:
+        if not isinstance(doc, dict):
+            continue
+        spec = doc.get("spec")
+        if not spec:
+            continue
+        # Find containers
+        containers = []
+        if "template" in spec and "spec" in spec["template"]:
+            containers = spec["template"]["spec"].get("containers", [])
+        elif "containers" in spec:
+            containers = spec["containers"]
+        for c in containers:
+            image = c.get("image", "")
+            assert ":latest" not in image, f"Container image uses latest tag in {yaml_path}: {image}"
+
+
+# ==========================================================================
+# Cross-cutting: All resources must have app.kubernetes.io/name label
+# ==========================================================================
+@pytest.mark.parametrize("yaml_path", list(all_yaml_files()))
+def test_app_kubernetes_io_name_label(yaml_path):
+    docs = load_yaml_all(yaml_path)
+    # Skip cluster-scoped or non-application resource kinds
+    excluded_kinds = {
+        "Namespace",
+        "CustomResourceDefinition",
+        "HelmRepository",
+        "HelmRelease",
+        "Kustomization",
+        "ClusterRole",
+        "ClusterRoleBinding",
+        "ClusterRole",
+        "ClusterRoleBinding",
+    }
+    for doc in docs:
+        if not isinstance(doc, dict):
+            continue
+        kind = doc.get("kind")
+        # skip cluster-scoped resources that have no namespace
+        meta = doc.get("metadata", {})
+        if not meta.get("namespace"):
+            continue
+        if kind in excluded_kinds:
+            continue
+        labels = meta.get("labels", {})
+        assert "app.kubernetes.io/name" in labels, f"Missing app.kubernetes.io/name label in {yaml_path}"
+
+
+# ==========================================================================
+# Cross-cutting: All resources must be referenced in a kustomization.yaml
+# ==========================================================================
+def all_kustomization_resources():
+    referenced = set()
+    for kustom in glob.glob(str(REPO_ROOT / "**/kustomization.yaml"), recursive=True):
+        kustom_doc = load_yaml(os.path.relpath(kustom, REPO_ROOT))
+        for res in kustom_doc.get("resources", []):
+            base = os.path.dirname(os.path.relpath(kustom, REPO_ROOT))
+            referenced.add(os.path.normpath(os.path.join(base, res)))
+    return referenced
+
+def test_all_resources_are_referenced():
+    referenced = all_kustomization_resources()
+    for yaml_path in all_yaml_files():
+        # Ignore kustomization.yaml itself
+        if yaml_path.endswith("kustomization.yaml"):
+            continue
+        assert yaml_path in referenced, f"Resource {yaml_path} is not referenced in any kustomization.yaml"

@@ -3,6 +3,8 @@ kind: HelmRepository
 metadata:
   name: metallb
   namespace: flux-system
+  labels:
+    app.kubernetes.io/name: metallb
 spec:
   url: https://metallb.github.io/metallb
   interval: 10m

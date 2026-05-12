@@ -5,6 +5,7 @@ metadata:
   namespace: prometheus
   labels:
     app: proxmox-zfs-exporter
+    app.kubernetes.io/name: proxmox-zfs-exporter
 spec:
   ports:
     - name: metrics

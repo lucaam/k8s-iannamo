@@ -3,6 +3,9 @@ kind: HelmRelease
 metadata:
   name: gatus
   namespace: gatus
+  labels:
+    app.kubernetes.io/name: gatus
+  annotations: {}
 spec:
   interval: 5m
   chart:

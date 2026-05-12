@@ -3,6 +3,8 @@ kind: HelmRepository
 metadata:
   name: authentik
   namespace: flux-system
+  labels:
+    app.kubernetes.io/name: authentik
 spec:
   interval: 1h
   url: https://charts.goauthentik.io

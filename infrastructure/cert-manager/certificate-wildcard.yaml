@@ -3,6 +3,8 @@ kind: Certificate
 metadata:
   name: wildcard-apps
   namespace: traefik
+  labels:
+    app.kubernetes.io/name: cert-manager
 spec:
   secretName: wildcard-apps-tls
   issuerRef:

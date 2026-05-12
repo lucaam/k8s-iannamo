@@ -3,6 +3,8 @@ kind: HelmRelease
 metadata:
   name: csi-driver-nfs
   namespace: kube-system
+  labels:
+    app.kubernetes.io/name: nfs-csi
 spec:
   interval: 10m
   chart:
