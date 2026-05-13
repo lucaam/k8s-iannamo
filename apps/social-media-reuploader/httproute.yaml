@@ -15,8 +15,8 @@ spec:
         - path:
             type: PathPrefix
             value: /
-      # Verify that the backend service name below matches the service created by the Helm chart.
-      # Common possibilities: "social-media-reuploader" or "social-media-reuploader-gui".
+      # Route to the GUI service created by the chart (fullname + "-gui").
+      # The chart defines the GUI Service as <fullname>-gui on port 8081.
       backendRefs:
-        - name: social-media-reuploader
-          port: 80
+        - name: social-media-reuploader-gui
+          port: 8081
