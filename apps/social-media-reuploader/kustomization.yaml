@@ -5,3 +5,4 @@ resources:
   - helm-repository.yaml
   - secret-social-media-reuploader.sops.yaml
   - helm-release.yaml
+  - httproute.yaml
