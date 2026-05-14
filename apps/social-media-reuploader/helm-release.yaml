@@ -53,5 +53,5 @@ spec:
     db:
       pvc:
         enabled: true
-        storageClass: ""
+        storageClass: nfs-flash
         size: 1Gi
