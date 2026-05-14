@@ -1,0 +1,22 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: social-media-reuploader-gui
+  namespace: social-media-reuploader
+spec:
+  parentRefs:
+    - name: traefik-gateway
+      namespace: traefik
+      sectionName: websecure
+  hostnames:
+    - "social-media-reuploader.${DOMAIN}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      # Route to the GUI service created by the chart (fullname + "-gui").
+      # The chart defines the GUI Service as <fullname>-gui on port 8081.
+      backendRefs:
+        - name: social-media-reuploader-gui
+          port: 8081

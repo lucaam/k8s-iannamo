@@ -30,6 +30,18 @@
       "datasourceTemplate": "docker",
       "packageNameTemplate": "{{{depName}}}"
     }
+    ,
+    {
+      "description": "Docker images in Helm chart values.yaml files (charts/*/values.yaml)",
+      "fileMatch": [
+        "(^|/).*charts/.*/values\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*tag:\\s*['\"]?(?<currentValue>v?[^'\"\\s@]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "packageNameTemplate": "{{{depName}}}"
+    }
   ],
   "packageRules": [
     {
