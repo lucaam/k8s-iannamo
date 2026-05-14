@@ -183,7 +183,7 @@ spec:
         fi
       initContainer:
         name: setup-config
-        image: mikefarah/yq:4.44.2
+        image: mikefarah/yq:4.53.2
         securityContext:
           runAsUser: 0
         command: ["/bin/sh", "-c"]
