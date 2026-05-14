@@ -52,4 +52,6 @@ spec:
       port: 8081
     db:
       pvc:
-        enabled: false
+        enabled: true
+        storageClass: ""
+        size: 1Gi
