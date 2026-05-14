@@ -24,7 +24,7 @@ spec:
       name: ""
     image:
       repository: ghcr.io/lucaam/social-media-reuploader
-      tag: "0.6.1"
+      tag: "0.6.2"
       pullPolicy: IfNotPresent
     service:
       type: ClusterIP
@@ -49,7 +49,7 @@ spec:
       secretName: social-media-reuploader-gui-secret
       image:
         repository: ghcr.io/lucaam/social-media-reuploader
-        tag: "0.6.1"
+        tag: "0.6.2"
         pullPolicy: IfNotPresent
       port: 8081
     db:
