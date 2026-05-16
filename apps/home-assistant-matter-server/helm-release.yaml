@@ -15,9 +15,9 @@ spec:
         namespace: flux-system
   values:
     image:
-      repository: ghcr.io/matter-js/python-matter-server
+      repository: matter-js/matterjs-server
       pullPolicy: IfNotPresent
-      tag: "8.1.2"
+      tag: "0.6.8"
 
     log:
       logLevel: info
