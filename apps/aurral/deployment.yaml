@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aurral
+  namespace: aurral
+  labels:
+    app: aurral
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aurral
+  template:
+    metadata:
+      labels:
+        app: aurral
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: aurral
+        image: ghcr.io/lklynet/aurral:1.76.3
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: aurral-secrets
+              key: admin_password
+        - name: APP_DOCS_URL
+          value: "https://github.com/lklynet/aurral"
+        volumeMounts:
+        - name: config-data
+          mountPath: /config
+        - name: media-data
+          mountPath: /media
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+      volumes:
+      - name: config-data
+        persistentVolumeClaim:
+          claimName: aurral-config
+      - name: media-data
+        persistentVolumeClaim:
+          claimName: aurral-media

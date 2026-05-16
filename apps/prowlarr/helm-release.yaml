@@ -1,0 +1,26 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: prowlarr
+  namespace: prowlarr
+  labels:
+    app.kubernetes.io/name: prowlarr
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./charts/prowlarr
+      sourceRef:
+        kind: GitRepository
+        name: media-servarr
+        namespace: flux-system
+  targetNamespace: prowlarr
+  values:
+    podSecurityContext:
+      fsGroup: 1000
+    securityContext:
+      runAsUser: 1000
+    persistence:
+      config:
+        enabled: true
+        existingClaim: prowlarr-storage

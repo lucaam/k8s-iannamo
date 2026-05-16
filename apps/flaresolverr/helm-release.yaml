@@ -1,0 +1,22 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: flaresolverr
+  namespace: flaresolverr
+  labels:
+    app.kubernetes.io/name: flaresolverr
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./charts/flaresolverr
+      sourceRef:
+        kind: GitRepository
+        name: media-servarr
+        namespace: flux-system
+  targetNamespace: flaresolverr
+  values:
+    podSecurityContext:
+      fsGroup: 1000
+    securityContext:
+      runAsUser: 1000

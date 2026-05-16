@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - helm-release.yaml
+  - pvc.yaml
+  - secret-slskd.sops.yaml
+  - httproute.yaml
+metadata:
+  name: slskd
+  labels:
+    app.kubernetes.io/name: slskd

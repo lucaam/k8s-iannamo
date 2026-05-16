@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aurral-config
+  namespace: aurral
+  labels:
+    app.kubernetes.io/name: aurral-config
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-flash
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aurral-media
+  namespace: aurral
+  labels:
+    app.kubernetes.io/name: aurral-media
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: nfs-spacex
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aurral-storage
+  namespace: aurral
+  labels:
+    app.kubernetes.io/name: aurral-storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nfs-flash
