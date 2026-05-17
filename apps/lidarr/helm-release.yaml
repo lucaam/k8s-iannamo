@@ -1,0 +1,30 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: lidarr
+  namespace: lidarr
+  labels:
+    app.kubernetes.io/name: lidarr
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: ./charts/lidarr
+      sourceRef:
+        kind: GitRepository
+        name: media-servarr
+        namespace: flux-system
+  targetNamespace: lidarr
+  values:
+    podSecurityContext:
+      fsGroup: 1000
+    securityContext:
+      runAsUser: 1000
+    persistence:
+      config:
+        enabled: true
+        existingClaim: lidarr-storage
+      media:
+        enabled: true
+        existingClaim: lidarr-media
+      # media/downloads left disabled by default; enable and point to nfs-spacex PVCs if needed
