@@ -1,0 +1,31 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+spec:
+  distribution:
+    version: "2.x"
+    registry: "ghcr.io/controlplaneio-fluxcd"
+  components:
+    - source-controller
+    - kustomize-controller
+    - helm-controller
+    - notification-controller
+  cluster:
+    type: kubernetes
+    size: medium
+    multitenant: false
+    networkPolicy: true
+  sync:
+    kind: GitRepository
+    url: https://github.com/lucaam/k8s-iannamo.git
+    ref: refs/heads/main
+    path: ./clusters/production
+    pullSecret: flux-system
+  wait: true
+
+# NOTE: Do not push/apply this FluxInstance in the same commit as the operator
+# installation files. First commit the OCIRepository + HelmRelease above, wait
+# for the HelmRelease to install the operator and its CRDs, then commit/push
+# this `fluxinstance.yaml` so the operator can reconcile it successfully.
