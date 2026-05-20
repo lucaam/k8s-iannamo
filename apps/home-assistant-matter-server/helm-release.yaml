@@ -38,18 +38,10 @@ spec:
     hostNetwork: true
     hostPort: true
 
-    # Disable chart persistence, use external PVC instead
+    # Use an existing PVC for data (avoid chart-created PVCs/volumeClaimTemplates)
     persistence:
-      enabled: false
-
-    additionalVolumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: home-assistant-matter-server-data
-
-    additionalMounts:
-      - name: data
-        mountPath: /data
+      enabled: true
+      existingClaim: home-assistant-matter-server-data
 
     podSecurityContext:
       fsGroup: 1000
