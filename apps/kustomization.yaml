@@ -5,7 +5,6 @@ resources:
   - mosquitto
   - zigbee2mqtt
   - home-assistant
-  - home-assistant-matter-server
   - immich
   - tado-api-proxy
   - gatus
