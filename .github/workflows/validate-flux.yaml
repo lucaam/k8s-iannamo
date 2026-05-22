@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Kustomize
-        uses: fluxcd/pkg/actions/kustomize@f3ad4b56adec90eb5661af565cdebec997ad4bfb # main
+        uses: fluxcd/pkg/actions/kustomize@f50d6110eaf9d087122148fa8d95d1f509d53634 # main
 
       - name: Build ${{ matrix.path }}
         run: |
@@ -81,7 +81,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Kustomize
-        uses: fluxcd/pkg/actions/kustomize@f3ad4b56adec90eb5661af565cdebec997ad4bfb # main
+        uses: fluxcd/pkg/actions/kustomize@f50d6110eaf9d087122148fa8d95d1f509d53634 # main
 
       - name: Setup kubeconform
         run: |
