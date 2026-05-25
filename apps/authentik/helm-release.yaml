@@ -152,11 +152,11 @@ spec:
       # -- Resource limits and requests for server pods
       resources:
         limits:
-          cpu: 150m
-          memory: 2048Mi
+          cpu: "150m"
+          memory: "2048Mi"
         requests:
-          cpu: 61m
-          memory: 1024Mi
+          cpu: "61m"
+          memory: "1024Mi"
 
       # authentik server container ports
       containerPorts:
@@ -369,11 +369,11 @@ spec:
       # -- Resource limits and requests for the authentik worker
       resources:
         limits:
-          cpu: 150m
-          memory: 2048Mi
+          cpu: "150m"
+          memory: "2048Mi"
         requests:
-          cpu: 61m
-          memory: 1024Mi
+          cpu: "61m"
+          memory: "1024Mi"
 
       # authentik worker container ports
       containerPorts:
