@@ -81,13 +81,27 @@ spec:
         command: ['sh', '-c']
         args:
           - |
-            echo "Fixing www permissions..."
-            mkdir -p /config/www/community
-            chown 1000:1000 /config/www
-            chown -R 1000:1000 /config/www/community
-            chmod 775 /config/www
-            chmod -R 775 /config/www/community
-            echo "Done!"
+              echo "Fixing www and media permissions..."
+              # Helper: run command, warn on non-zero exit, but continue
+              run_and_warn() {
+                "$@"
+                rc=$?
+                if [ $rc -ne 0 ]; then
+                  echo "Warning: command failed: $* exited with code $rc" >&2
+                fi
+                return 0
+              }
+              # Ensure usual www folders exist and have correct ownership
+              run_and_warn mkdir -p /config/www/community
+              run_and_warn chown 1000:1000 /config/www
+              run_and_warn chown -R 1000:1000 /config/www/community
+              run_and_warn chmod 775 /config/www
+              run_and_warn chmod -R 775 /config/www/community
+              # Ensure media directory exists for Home Assistant local media browser
+              run_and_warn mkdir -p /config/media
+              run_and_warn chown 1000:1000 /config/media
+              run_and_warn chmod 775 /config/media
+              echo "Done!"
         volumeMounts:
           - name: home-assistant
             mountPath: /config
@@ -99,7 +113,8 @@ spec:
       enabled: true
       # Force init will merge the current configuration file with the default configuration on every start
       # This is useful when you want to ensure that the configuration file is always up to date
-      forceInit: true
+      # Force init can delay startup during upgrades; disable to speed readiness
+      forceInit: false
       # List of trusted proxies in the format of CIDR notation in a case of using a reverse proxy
       # Here is the list of the most common private IP ranges, use your list of possible trusted proxies, usually, it's the IP of the reverse proxy
       trusted_proxies:
@@ -257,6 +272,13 @@ spec:
     #    protocol: TCP
     #    nodePort: 30124
 
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
     livenessProbe:
       failureThreshold: 3
       httpGet:
@@ -275,7 +297,15 @@ spec:
       periodSeconds: 10
       successThreshold: 1
       timeoutSeconds: 1
-    startupProbe: {}
+    startupProbe:
+      httpGet:
+        path: /
+        port: http
+        scheme: HTTP
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 18
     # initialDelaySeconds: 1
     # periodSeconds: 5
     # timeoutSeconds: 1
