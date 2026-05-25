@@ -81,13 +81,27 @@ spec:
         command: ['sh', '-c']
         args:
           - |
-            echo "Fixing www permissions..."
-            mkdir -p /config/www/community
-            chown 1000:1000 /config/www
-            chown -R 1000:1000 /config/www/community
-            chmod 775 /config/www
-            chmod -R 775 /config/www/community
-            echo "Done!"
+              echo "Fixing www and media permissions..."
+              # Helper: run command, warn on non-zero exit, but continue
+              run_and_warn() {
+                "$@"
+                rc=$?
+                if [ $rc -ne 0 ]; then
+                  echo "Warning: command failed: $* exited with code $rc" >&2
+                fi
+                return 0
+              }
+              # Ensure usual www folders exist and have correct ownership
+              run_and_warn mkdir -p /config/www/community
+              run_and_warn chown 1000:1000 /config/www
+              run_and_warn chown -R 1000:1000 /config/www/community
+              run_and_warn chmod 775 /config/www
+              run_and_warn chmod -R 775 /config/www/community
+              # Ensure media directory exists for Home Assistant local media browser
+              run_and_warn mkdir -p /config/media
+              run_and_warn chown 1000:1000 /config/media
+              run_and_warn chmod 775 /config/media
+              echo "Done!"
         volumeMounts:
           - name: home-assistant
             mountPath: /config
