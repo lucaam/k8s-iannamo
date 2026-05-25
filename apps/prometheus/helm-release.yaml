@@ -61,8 +61,8 @@ spec:
             cpu: 66m
             memory: 896Mi
           limits:
-            cpu: 132m
-            memory: 1664Mi
+            cpu: 150m
+            memory: 1792Mi
 
     # ----------------------------------------------------------------
     # Alertmanager — config completa nel Secret SOPS "alertmanager-config"

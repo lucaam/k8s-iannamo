@@ -25,7 +25,7 @@ spec:
         memory: "320Mi"
       limits:
         cpu: "50m"
-        memory: "640Mi"
+        memory: "768Mi"
 
     service:
       type: ClusterIP

@@ -31,8 +31,8 @@ spec:
         cpu: "281m"
         memory: "416Mi"
       limits:
-        cpu: "579m"
-        memory: "896Mi"
+        cpu: "600m"
+        memory: "1024Mi"
     service:
       type: ClusterIP
       port: 80
