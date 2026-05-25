@@ -32,11 +32,11 @@ spec:
 
     resources:
       requests:
+        cpu: "10m"
+        memory: "32Mi"
+      limits:
         cpu: "50m"
         memory: "64Mi"
-      limits:
-        cpu: "200m"
-        memory: "256Mi"
 
     # OIDC values sono app-specific (restano nel secret gatus-secrets).
     # TELEGRAM è gestito da Flux postBuild.substituteFrom → viene iniettato

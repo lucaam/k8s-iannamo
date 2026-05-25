@@ -58,11 +58,11 @@ spec:
         # Lasciamo headroom prima di kill OOM
         resources:
           requests:
-            cpu: 200m
-            memory: 1Gi
+            cpu: 66m
+            memory: 896Mi
           limits:
-            cpu: 1500m
-            memory: 3Gi
+            cpu: 132m
+            memory: 1664Mi
 
     # ----------------------------------------------------------------
     # Alertmanager — config completa nel Secret SOPS "alertmanager-config"

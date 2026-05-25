@@ -152,11 +152,11 @@ spec:
       # -- Resource limits and requests for server pods
       resources:
         limits:
-          cpu: 1000m
-          memory: 1Gi
+          cpu: 122m
+          memory: 1920Mi
         requests:
-          cpu: 200m
-          memory: 512Mi
+          cpu: 61m
+          memory: 1024Mi
 
       # authentik server container ports
       containerPorts:
@@ -369,11 +369,11 @@ spec:
       # -- Resource limits and requests for the authentik worker
       resources:
         limits:
-          cpu: 1000m
-          memory: 1Gi
+          cpu: 122m
+          memory: 1920Mi
         requests:
-          cpu: 200m
-          memory: 512Mi
+          cpu: 61m
+          memory: 1024Mi
 
       # authentik worker container ports
       containerPorts:
@@ -493,6 +493,13 @@ spec:
             - ReadWriteMany
         containerSecurityContext:
           readOnlyRootFilesystem: false
+        resources:
+          requests:
+            cpu: "61m"
+            memory: "480Mi"
+          limits:
+            cpu: "122m"
+            memory: "1024Mi"
       readReplicas:
         resourcesPreset: "none"
       backup:

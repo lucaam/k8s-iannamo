@@ -28,11 +28,11 @@ spec:
       pullPolicy: IfNotPresent
     resources:
       requests:
-        cpu: "150m"
-        memory: "256Mi"
+        cpu: "281m"
+        memory: "416Mi"
       limits:
-        cpu: "500m"
-        memory: "1Gi"
+        cpu: "579m"
+        memory: "896Mi"
     service:
       type: ClusterIP
       port: 80

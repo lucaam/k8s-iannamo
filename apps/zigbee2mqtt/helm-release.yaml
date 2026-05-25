@@ -55,11 +55,11 @@ spec:
       # -- CPU/Memory configuration for the pods
       resources:
         requests:
-          memory: 600Mi
-          cpu: 200m
+          cpu: "10m"
+          memory: "128Mi"
         limits:
-          memory: 600Mi
-          cpu: 200m
+          cpu: "50m"
+          memory: "256Mi"
       # -- Overrides the entrypoint of the container
       command: {}
       # -- Node taint tolerations for the pods
