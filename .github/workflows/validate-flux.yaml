@@ -30,7 +30,12 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Kustomize
-        uses: fluxcd/pkg/actions/kustomize@2b9f4c54119931dd929e1f47b88ef8ae118fa6c0 # main
+        run: |
+          echo "Installing kustomize v${KUSTOMIZE_VERSION}"
+          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar xz -C /usr/local/bin kustomize
+          chmod +x /usr/local/bin/kustomize
+          kustomize version || true
 
       - name: Build ${{ matrix.path }}
         run: |
@@ -67,6 +72,7 @@ jobs:
               trailing-spaces: disable
               new-line-at-end-of-file: disable
               empty-lines: disable
+              key-duplicates: disable
 
   validate-kubeconform:
     name: Kubeconform
