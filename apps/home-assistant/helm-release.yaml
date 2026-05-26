@@ -317,13 +317,13 @@ spec:
           runAsGroup: 1000
           fsGroup: 1000
         # Resource settings for the code-server container (metrics-based suggestion)
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "224Mi"
-          limits:
-            cpu: "200m"
-            memory: "448Mi"
+        # resources:
+        #   requests:
+        #     cpu: "100m"
+        #     memory: "224Mi"
+        #   limits:
+        #     cpu: "200m"
+        #     memory: "448Mi"
         # Image settings for the code-server addon
         image:
           # Repository for the code-server image
