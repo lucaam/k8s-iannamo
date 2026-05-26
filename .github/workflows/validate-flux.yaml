@@ -30,12 +30,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Kustomize
-        run: |
-          echo "Installing kustomize v${KUSTOMIZE_VERSION}"
-          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
-            | tar xz -C /usr/local/bin kustomize
-          chmod +x /usr/local/bin/kustomize
-          kustomize version || true
+        uses: fluxcd/pkg/actions/kustomize@2b9f4c54119931dd929e1f47b88ef8ae118fa6c0 # main
 
       - name: Build ${{ matrix.path }}
         run: |
@@ -54,7 +49,7 @@ jobs:
         uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c # v3
         with:
           file_or_dir: .
-          strict: false
+          strict: true
           config_data: |
             extends: default
             ignore: |
@@ -62,17 +57,14 @@ jobs:
               *.sops.yaml
               .sops.yaml
             rules:
+              # Keep a small set of accepted exceptions; enable duplicate-key checking
               line-length: disable
-              indentation: disable
+              document-start: disable
               comments:
                 min-spaces-from-content: 1
               truthy:
                 check-keys: false
-              document-start: disable
-              trailing-spaces: disable
-              new-line-at-end-of-file: disable
-              empty-lines: disable
-              key-duplicates: disable
+              key-duplicates: enable
 
   validate-kubeconform:
     name: Kubeconform
