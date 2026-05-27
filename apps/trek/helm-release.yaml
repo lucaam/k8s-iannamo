@@ -19,6 +19,14 @@ spec:
       tag: 3.0.21
       pullPolicy: Always
 
+    resources:
+      requests:
+        cpu: "15m"
+        memory: "320Mi"
+      limits:
+        cpu: "50m"
+        memory: "768Mi"
+
     service:
       type: ClusterIP
       port: 3000
