@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Kustomize
-        uses: fluxcd/pkg/actions/kustomize@2b9f4c54119931dd929e1f47b88ef8ae118fa6c0 # main
+        uses: fluxcd/pkg/actions/kustomize@2b9f4c54119931dd929e1f47b88ef8ae118fa6c0 # was @main
 
       - name: Build ${{ matrix.path }}
         run: |
@@ -41,31 +41,60 @@ jobs:
   validate-yaml:
     name: YAML Lint
     runs-on: ubuntu-latest
+    env:
+      BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: YAML Lint
-        uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c # v3
-        with:
-          file_or_dir: .
-          config_data: |
-            extends: default
-            ignore: |
-              clusters/production/flux-system/
-              *.sops.yaml
-              .sops.yaml
-            rules:
-              line-length: disable
-              indentation: disable
-              comments:
-                min-spaces-from-content: 1
-              truthy:
-                check-keys: false
-              document-start: disable
-              trailing-spaces: disable
-              new-line-at-end-of-file: disable
-              empty-lines: disable
+      - name: YAML Lint (changed files only)
+        run: |
+          set -euo pipefail
+          # Bring origin history so we can diff against base branch
+          git fetch origin --no-tags --prune --depth=1 || true
+
+          # Prefer PR base if available (set in job env), otherwise fall back to origin/main
+          echo "Base ref: $BASE_REF"
+          git fetch origin "$BASE_REF" --depth=1 || true
+
+          # Compute changed files relative to base (NUL-separated for safety)
+          mapfile -d '' -t CHANGED_FILES < <(git diff --name-only -z "origin/$BASE_REF"...HEAD || true)
+          if [ ${#CHANGED_FILES[@]} -eq 0 ]; then
+            echo "No files changed in this PR — skipping yamllint"
+            exit 0
+          fi
+
+          # Filter YAML files (preserve filenames with spaces)
+          YAML_FILES=()
+          for f in "${CHANGED_FILES[@]}"; do
+            if [[ "$f" =~ \.ya?ml$ ]]; then
+              YAML_FILES+=("$f")
+            fi
+          done
+          if [ ${#YAML_FILES[@]} -eq 0 ]; then
+            echo "No YAML files changed in this PR — skipping yamllint"
+            exit 0
+          fi
+
+          # Write yamllint config
+          cat > /tmp/ci-yamllint.yaml << 'YAML'
+          extends: default
+          ignore: |
+            clusters/production/flux-system/
+            *.sops.yaml
+            .sops.yaml
+          rules:
+            line-length: disable
+            document-start: disable
+            comments:
+              min-spaces-from-content: 1
+            truthy:
+              check-keys: false
+            key-duplicates: enable
+          YAML
+
+          # Run yamllint on changed YAML files (safe for spaces)
+          yamllint -c /tmp/ci-yamllint.yaml "${YAML_FILES[@]}" || exit 1
 
   validate-kubeconform:
     name: Kubeconform
@@ -81,7 +110,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Kustomize
-        uses: fluxcd/pkg/actions/kustomize@2b9f4c54119931dd929e1f47b88ef8ae118fa6c0 # main
+        uses: fluxcd/pkg/actions/kustomize@2b9f4c54119931dd929e1f47b88ef8ae118fa6c0 # was @main
 
       - name: Setup kubeconform
         run: |

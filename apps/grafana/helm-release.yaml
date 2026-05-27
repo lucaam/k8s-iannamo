@@ -20,10 +20,17 @@ spec:
     persistence:
       enabled: true
       existingClaim: grafana-storage
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "384Mi"
+      limits:
+        cpu: "50m"
+        memory: "768Mi"
     # OIDC / Generic OAuth (Authentik) configuration
     grafana.ini:
       server:
-          root_url: https://grafana.${DOMAIN}
+        root_url: https://grafana.${DOMAIN}
       auth.generic_oauth:
         enabled: true
         name: Authentik
@@ -38,7 +45,7 @@ spec:
         # Example: if Authentik includes a `groups` array and you create a group
         # `monitoring-admin`, this expression assigns Grafana `Admin` to members,
         # otherwise assigns `Editor` so users can create dashboards.
-        role_attribute_path: "contains(groups, 'monitoring admins') && 'Admin' || contains(groups, 'monitoring editors') && 'Editor' || 'Viewer'"        
+        role_attribute_path: "contains(groups, 'monitoring admins') && 'Admin' || contains(groups, 'monitoring editors') && 'Editor' || 'Viewer'"
     envValueFrom:
       GF_AUTH_GENERIC_OAUTH_CLIENT_ID:
         secretKeyRef:

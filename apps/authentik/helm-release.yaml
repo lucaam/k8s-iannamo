@@ -152,11 +152,11 @@ spec:
       # -- Resource limits and requests for server pods
       resources:
         limits:
-          cpu: 1000m
-          memory: 1Gi
+          cpu: "150m"
+          memory: "2048Mi"
         requests:
-          cpu: 200m
-          memory: 512Mi
+          cpu: "61m"
+          memory: "1024Mi"
 
       # authentik server container ports
       containerPorts:
@@ -369,11 +369,11 @@ spec:
       # -- Resource limits and requests for the authentik worker
       resources:
         limits:
-          cpu: 1000m
-          memory: 1Gi
+          cpu: "150m"
+          memory: "2048Mi"
         requests:
-          cpu: 200m
-          memory: 512Mi
+          cpu: "61m"
+          memory: "1024Mi"
 
       # authentik worker container ports
       containerPorts:
@@ -437,7 +437,6 @@ spec:
       terminationGracePeriodSeconds: 30
 
 
-
     serviceAccount:
       # -- Create service account. Needed for managed outposts
       create: true
@@ -493,6 +492,13 @@ spec:
             - ReadWriteMany
         containerSecurityContext:
           readOnlyRootFilesystem: false
+        resources:
+          requests:
+            cpu: "61m"
+            memory: "480Mi"
+          limits:
+            cpu: "150m"
+            memory: "1024Mi"
       readReplicas:
         resourcesPreset: "none"
       backup:

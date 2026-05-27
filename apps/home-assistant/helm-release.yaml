@@ -27,6 +27,15 @@ spec:
     # Use environment variables from ConfigMaps or Secrets
     envFrom: []
 
+    # Resource sizing inferred from Prometheus metrics (p95/p99 + safety)
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "2688Mi"
+      limits:
+        cpu: "1000m"
+        memory: "6144Mi"
+
     hostPort:
       # Enable 'hostPort' or not
       enabled: false
@@ -272,13 +281,6 @@ spec:
     #    protocol: TCP
     #    nodePort: 30124
 
-    resources:
-      requests:
-        cpu: "250m"
-        memory: "512Mi"
-      limits:
-        cpu: "1000m"
-        memory: "1Gi"
     livenessProbe:
       failureThreshold: 3
       httpGet:
@@ -337,8 +339,14 @@ spec:
           runAsUser: 1000
           runAsGroup: 1000
           fsGroup: 1000
-        # Resource settings for the code-server container
-        resources: {}
+        # Resource settings for the code-server container (metrics-based suggestion)
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "224Mi"
+          limits:
+            cpu: "200m"
+            memory: "448Mi"
         # Image settings for the code-server addon
         image:
           # Repository for the code-server image
