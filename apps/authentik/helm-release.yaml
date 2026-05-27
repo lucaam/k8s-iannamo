@@ -369,10 +369,10 @@ spec:
       # -- Resource limits and requests for the authentik worker
       resources:
         limits:
-          cpu: "150m"
+          cpu: "1000m"
           memory: "3Gi"
         requests:
-          cpu: "61m"
+          cpu: "250m"
           memory: "1536Mi"
 
       # authentik worker container ports
@@ -386,13 +386,13 @@ spec:
         # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
         failureThreshold: 3
         # -- Number of seconds after the container has started before [probe] is initiated
-        initialDelaySeconds: 5
+        initialDelaySeconds: 15
         # -- How often (in seconds) to perform the [probe]
         periodSeconds: 10
         # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
         successThreshold: 1
         # -- Number of seconds after which the [probe] times out
-        timeoutSeconds: 3
+        timeoutSeconds: 10
         ## Probe configuration
         exec:
           command:
@@ -403,13 +403,13 @@ spec:
         # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
         failureThreshold: 3
         # -- Number of seconds after the container has started before [probe] is initiated
-        initialDelaySeconds: 5
+        initialDelaySeconds: 15
         # -- How often (in seconds) to perform the [probe]
         periodSeconds: 10
         # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
         successThreshold: 1
         # -- Number of seconds after which the [probe] times out
-        timeoutSeconds: 3
+        timeoutSeconds: 10
         ## Probe configuration
         exec:
           command:
@@ -420,13 +420,13 @@ spec:
         # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
         failureThreshold: 60
         # -- Number of seconds after the container has started before [probe] is initiated
-        initialDelaySeconds: 30
+        initialDelaySeconds: 60
         # -- How often (in seconds) to perform the [probe]
         periodSeconds: 10
         # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
         successThreshold: 1
         # -- Number of seconds after which the [probe] times out
-        timeoutSeconds: 3
+        timeoutSeconds: 10
         ## Probe configuration
         exec:
           command:
@@ -494,11 +494,11 @@ spec:
           readOnlyRootFilesystem: false
         resources:
           requests:
-            cpu: "61m"
-            memory: "480Mi"
+            cpu: "250m"
+            memory: "512Mi"
           limits:
-            cpu: "150m"
-            memory: "1024Mi"
+            cpu: "1000m"
+            memory: "2Gi"
       readReplicas:
         resourcesPreset: "none"
       backup:
