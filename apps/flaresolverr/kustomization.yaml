@@ -3,8 +3,7 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - helm-release.yaml
-  - secret-flaresolverr.sops.yaml
-  - httproute.yaml
+  # secret and HTTPRoute intentionally removed to keep FlareSolverr internal
 metadata:
   name: flaresolverr
   labels:
