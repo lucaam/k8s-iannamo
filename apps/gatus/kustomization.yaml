@@ -6,6 +6,7 @@ resources:
   - secret-gatus.sops.yaml
   - helm-repository.yaml
   - helm-release.yaml
+  - limitrange.yaml
   - pvc.yaml
   - httproute.yaml
   - servicemonitor-gatus.yaml

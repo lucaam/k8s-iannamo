@@ -5,6 +5,7 @@ resources:
   - helm-release.yaml
   - secret-profilarr.sops.yaml
   - httproute.yaml
+  - limitrange.yaml
 metadata:
   name: profilarr
   labels:
