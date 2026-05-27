@@ -370,10 +370,10 @@ spec:
       resources:
         limits:
           cpu: "150m"
-          memory: "2048Mi"
+          memory: "3Gi"
         requests:
           cpu: "61m"
-          memory: "1024Mi"
+          memory: "1536Mi"
 
       # authentik worker container ports
       containerPorts:
