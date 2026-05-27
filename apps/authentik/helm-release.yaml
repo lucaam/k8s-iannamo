@@ -437,7 +437,6 @@ spec:
       terminationGracePeriodSeconds: 30
 
 
-
     serviceAccount:
       # -- Create service account. Needed for managed outposts
       create: true

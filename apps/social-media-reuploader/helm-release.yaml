@@ -49,7 +49,7 @@ spec:
       WORKERS: "2"
       WEBHOOK_URL: ""
     gui:
-      env: 
+      env:
         OAUTH_ADMIN_GROUPS: "monitoring admins"
       enabled: true
       useSecret: true
