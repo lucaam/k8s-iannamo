@@ -46,7 +46,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: aurral-secrets
-              key: admin_password
+              key: ADMIN_PASSWORD
         - name: APP_DOCS_URL
           value: "https://github.com/lklynet/aurral"
         envFrom:
