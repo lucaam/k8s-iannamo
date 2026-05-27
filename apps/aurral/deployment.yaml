@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aurral
-  namespace: media
+  namespace: aurral
   labels:
     app: aurral
     app.kubernetes.io/name: aurral
@@ -19,9 +19,9 @@ spec:
         app.kubernetes.io/name: aurral
     spec:
       securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
       containers:
       - name: aurral
         image: ghcr.io/lklynet/aurral:1.76.3
@@ -29,9 +29,19 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
         ports:
-        - containerPort: 8080
+        - containerPort: 3001
           name: http
         env:
+        - name: PORT
+          value: "3001"
+        - name: TRUST_PROXY
+          value: "1"
+        - name: DOWNLOAD_FOLDER
+          value: "/app/downloads"
+        - name: PUID
+          value: "1001"
+        - name: PGID
+          value: "1001"
         - name: ADMIN_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -40,10 +50,12 @@ spec:
         - name: APP_DOCS_URL
           value: "https://github.com/lklynet/aurral"
         volumeMounts:
-        - name: config-data
-            mountPath: /config
-          - name: media-data
-            mountPath: /media
+        - name: aurral-config
+          mountPath: /app/config
+        - name: aurral-media
+          mountPath: /app/downloads
+        - name: aurral-storage
+          mountPath: /app/backend/data
         resources:
           requests:
             memory: "128Mi"
