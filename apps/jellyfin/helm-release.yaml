@@ -27,4 +27,4 @@ spec:
       media:
         enabled: true
         existingClaim: jellyfin-media
-      # transcode/cache: consider emptyDir for performance, or create a small fast PVC
+    # transcode/cache: consider emptyDir for performance, or create a small fast PVC

@@ -50,8 +50,8 @@ Files created
 	- **apps/musicseerr/**: PVCs present (`musicseerr-media` on `nfs-spacex`); Deployment already sets `fsGroup/runAsUser`.
 	- **apps/profilarr/**: HelmRelease present; no media PVC required by default.
 	- **apps/prowlarr/**: `prowlarr-storage` PVC exists (currently `nfs-flash`, 5Gi) for indexer metadata; HelmRelease values were updated to include podSecurityContext/securityContext for NFS permission alignment. Consider an additional `prowlarr-media` on `nfs-spacex` if the app will store larger files.
-	- **apps/transmission/**: `transmission-storage` PVC on `nfs-spacex` (200Gi); downloads enabled and mapped to the same PVC. HelmRelease values were updated with podSecurityContext/securityContext to align file permissions.
-	- **apps/slskd/**: `slskd-storage` PVC on `nfs-spacex`; HelmRelease values were updated with podSecurityContext/securityContext.
+	- **apps/transmission/**: PVCs `transmission-config` (config) and `media-shared` (downloads); downloads are mapped to `media-shared`. HelmRelease values were updated with `podSecurityContext`/`securityContext` to align NFS permissions.
+	- **apps/slskd/**: `media-shared` PVC (shared media/downloads); HelmRelease values were updated with `podSecurityContext`/`securityContext`.
 	- **apps/soulsync/**: PVCs present (`soulsync-data` on `nfs-spacex`); deployment includes `securityContext` with `fsGroup/runAsUser`.
 
 **Changes applied in this branch/workspace**
