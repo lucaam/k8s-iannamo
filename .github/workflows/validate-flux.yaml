@@ -41,6 +41,8 @@ jobs:
   validate-yaml:
     name: YAML Lint
     runs-on: ubuntu-latest
+    env:
+      BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -51,18 +53,25 @@ jobs:
           # Bring origin history so we can diff against base branch
           git fetch origin --no-tags --prune --depth=1 || true
 
-          # Prefer PR base if available, otherwise fall back to origin/main
-          BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
+          # Prefer PR base if available (set in job env), otherwise fall back to origin/main
           echo "Base ref: $BASE_REF"
           git fetch origin "$BASE_REF" --depth=1 || true
 
-          # Compute changed files relative to base
-          CHANGED=$(git diff --name-only origin/$BASE_REF...HEAD || true)
-          echo "Changed files:\n$CHANGED"
+          # Compute changed files relative to base (NUL-separated for safety)
+          mapfile -d '' -t CHANGED_FILES < <(git diff --name-only -z "origin/$BASE_REF"...HEAD || true)
+          if [ ${#CHANGED_FILES[@]} -eq 0 ]; then
+            echo "No files changed in this PR — skipping yamllint"
+            exit 0
+          fi
 
-          # Select YAML files changed in this PR
-          YAML_FILES=$(echo "$CHANGED" | grep -E '\.ya?ml$' || true)
-          if [ -z "$YAML_FILES" ]; then
+          # Filter YAML files (preserve filenames with spaces)
+          YAML_FILES=()
+          for f in "${CHANGED_FILES[@]}"; do
+            if [[ "$f" =~ \.ya?ml$ ]]; then
+              YAML_FILES+=("$f")
+            fi
+          done
+          if [ ${#YAML_FILES[@]} -eq 0 ]; then
             echo "No YAML files changed in this PR — skipping yamllint"
             exit 0
           fi
@@ -84,8 +93,8 @@ jobs:
             key-duplicates: enable
           YAML
 
-          # Run yamllint on changed YAML files only
-          echo "$YAML_FILES" | xargs yamllint -c /tmp/ci-yamllint.yaml || exit 1
+          # Run yamllint on changed YAML files (safe for spaces)
+          yamllint -c /tmp/ci-yamllint.yaml "${YAML_FILES[@]}" || exit 1
 
   validate-kubeconform:
     name: Kubeconform
