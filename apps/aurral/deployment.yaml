@@ -49,6 +49,9 @@ spec:
               key: admin_password
         - name: APP_DOCS_URL
           value: "https://github.com/lklynet/aurral"
+        envFrom:
+        - secretRef:
+            name: aurral-secrets
         volumeMounts:
         - name: aurral-config
           mountPath: /app/config
@@ -65,20 +68,23 @@ spec:
             cpu: "500m"
         livenessProbe:
           tcpSocket:
-            port: 8080
+            port: 3001
           initialDelaySeconds: 60
           periodSeconds: 30
           failureThreshold: 3
         readinessProbe:
           tcpSocket:
-            port: 8080
+            port: 3001
           initialDelaySeconds: 10
           periodSeconds: 10
           failureThreshold: 3
       volumes:
-      - name: config-data
+      - name: aurral-config
         persistentVolumeClaim:
           claimName: aurral-config
-      - name: media-data
+      - name: aurral-media
         persistentVolumeClaim:
-          claimName: media-shared
+          claimName: aurral-media
+      - name: aurral-storage
+        persistentVolumeClaim:
+          claimName: aurral-storage
