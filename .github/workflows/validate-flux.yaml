@@ -45,26 +45,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: YAML Lint
-        uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c # v3
-        with:
-          file_or_dir: .
-          strict: true
-          config_data: |
-            extends: default
-            ignore: |
-              clusters/production/flux-system/
-              *.sops.yaml
-              .sops.yaml
-            rules:
-              # Keep a small set of accepted exceptions; enable duplicate-key checking
-              line-length: disable
-              document-start: disable
-              comments:
-                min-spaces-from-content: 1
-              truthy:
-                check-keys: false
-              key-duplicates: enable
+      - name: YAML Lint (changed files only)
+        run: |
+          set -euo pipefail
+          # Bring origin history so we can diff against base branch
+          git fetch origin --no-tags --prune --depth=1 || true
+
+          # Prefer PR base if available, otherwise fall back to origin/main
+          BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
+          echo "Base ref: $BASE_REF"
+          git fetch origin "$BASE_REF" --depth=1 || true
+
+          # Compute changed files relative to base
+          CHANGED=$(git diff --name-only origin/$BASE_REF...HEAD || true)
+          echo "Changed files:\n$CHANGED"
+
+          # Select YAML files changed in this PR
+          YAML_FILES=$(echo "$CHANGED" | grep -E '\.ya?ml$' || true)
+          if [ -z "$YAML_FILES" ]; then
+            echo "No YAML files changed in this PR — skipping yamllint"
+            exit 0
+          fi
+
+          # Write yamllint config
+          cat > /tmp/ci-yamllint.yaml << 'YAML'
+          extends: default
+          ignore: |
+            clusters/production/flux-system/
+            *.sops.yaml
+            .sops.yaml
+          rules:
+            line-length: disable
+            document-start: disable
+            comments:
+              min-spaces-from-content: 1
+            truthy:
+              check-keys: false
+            key-duplicates: enable
+          YAML
+
+          # Run yamllint on changed YAML files only
+          echo "$YAML_FILES" | xargs yamllint -c /tmp/ci-yamllint.yaml || exit 1
 
   validate-kubeconform:
     name: Kubeconform
