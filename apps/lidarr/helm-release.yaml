@@ -20,6 +20,13 @@ spec:
       fsGroup: 1000
     securityContext:
       runAsUser: 1000
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
     persistence:
       config:
         enabled: true

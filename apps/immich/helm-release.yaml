@@ -36,6 +36,13 @@ spec:
             image:
               repository: ghcr.io/immich-app/immich-server
               tag: v2.7.5
+            resources:
+              requests:
+                cpu: 200m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
             env:
               REDIS_HOSTNAME: '{{ printf "%s-valkey" .Release.Name }}'
               IMMICH_MACHINE_LEARNING_URL: '{{ printf "http://%s-machine-learning:3003" .Release.Name }}'
@@ -108,6 +115,13 @@ spec:
               image:
                 repository: ghcr.io/immich-app/immich-server
                 pullPolicy: IfNotPresent
+              resources:
+                requests:
+                  cpu: 300m
+                  memory: 512Mi
+                limits:
+                  cpu: 1000m
+                  memory: 1Gi
 
     machine-learning:
       enabled: true
@@ -118,6 +132,13 @@ spec:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
                 pullPolicy: IfNotPresent
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1Gi
+                limits:
+                  cpu: 2000m
+                  memory: 2Gi
               env:
                 TRANSFORMERS_CACHE: /cache
                 HF_XET_CACHE: /cache/huggingface-xet
