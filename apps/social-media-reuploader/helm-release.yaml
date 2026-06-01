@@ -49,8 +49,6 @@ spec:
       WORKERS: "2"
       WEBHOOK_URL: ""
     gui:
-      env:
-        OAUTH_ADMIN_GROUPS: "monitoring admins"
       enabled: true
       useSecret: true
       secretName: social-media-reuploader-gui-secret
