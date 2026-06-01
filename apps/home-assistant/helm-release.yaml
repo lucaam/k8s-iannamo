@@ -31,10 +31,10 @@ spec:
     resources:
       requests:
         cpu: "250m"
-        memory: "2688Mi"
+        memory: "2432Mi"
       limits:
         cpu: "1000m"
-        memory: "6144Mi"
+        memory: "5376Mi"
 
     hostPort:
       # Enable 'hostPort' or not
@@ -322,6 +322,8 @@ spec:
       # requires HA integration:  https://www.home-assistant.io/integrations/prometheus/
       enabled: true
       scrapeInterval: 30s
+      scrapeTimeout: 10s
+      path: /api/prometheus
       labels: {}
       # Bearer token authentication configuration
       bearerToken: {}
@@ -346,7 +348,7 @@ spec:
             memory: "224Mi"
           limits:
             cpu: "200m"
-            memory: "448Mi"
+            memory: "416Mi"
         # Image settings for the code-server addon
         image:
           # Repository for the code-server image

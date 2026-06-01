@@ -156,7 +156,7 @@ spec:
           memory: "2048Mi"
         requests:
           cpu: "61m"
-          memory: "1024Mi"
+          memory: "896Mi"
 
       # authentik server container ports
       containerPorts:
@@ -373,7 +373,7 @@ spec:
           memory: "3Gi"
         requests:
           cpu: "250m"
-          memory: "1536Mi"
+          memory: "896Mi"
 
       # authentik worker container ports
       containerPorts:
