@@ -24,7 +24,7 @@ spec:
       name: ""
     image:
       repository: ghcr.io/lucaam/social-media-reuploader
-      tag: "0.7.1"
+      tag: "0.8.0"
       pullPolicy: IfNotPresent
     resources:
       requests:
@@ -56,7 +56,7 @@ spec:
       secretName: social-media-reuploader-gui-secret
       image:
         repository: ghcr.io/lucaam/social-media-reuploader
-        tag: "0.7.1"
+        tag: "0.8.0"
         pullPolicy: IfNotPresent
       port: 8081
     db:
