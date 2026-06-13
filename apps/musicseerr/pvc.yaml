@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: musicseerr-config
+  namespace: musicseerr
+  labels:
+    app.kubernetes.io/name: musicseerr-config
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-flash
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: musicseerr-media
+  namespace: musicseerr
+  labels:
+    app.kubernetes.io/name: musicseerr-media
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: nfs-spacex
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: musicseerr-storage
+  namespace: musicseerr
+  labels:
+    app.kubernetes.io/name: musicseerr-storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: nfs-flash
+# NOTE: If this claim stores larger media or downloads, change `storageClassName` to `nfs-spacex`.
