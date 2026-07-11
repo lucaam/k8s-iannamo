@@ -13,6 +13,7 @@ spec:
         kind: GitRepository
         name: trek
         namespace: flux-system
+
   values:
     image:
       repository: mauriceboe/trek
@@ -38,23 +39,19 @@ spec:
       APP_URL: "https://trek.${DOMAIN}"
       FORCE_HTTPS: "true"
       TRUST_PROXY: "1"
-      # MCP Configuration
       MCP_RATE_LIMIT: "300"
       MCP_MAX_SESSION_PER_USER: "20"
-      # OIDC/OAuth2 Configuration
+      OIDC_ISSUER: "https://auth.${DOMAIN}"
       OIDC_ADMIN_CLAIM: "trip admins"
-      # Add these when you have Authentik configured:
-      # OIDC_ISSUER: "https://auth.${DOMAIN}"
-      # OIDC_CLIENT_ID: "trek"
-      # OIDC_DISCOVERY_URL: "https://auth.${DOMAIN}/application/o/.well-known/openid-configuration"
-      # OIDC_SCOPE: "openid email profile groups"
+      OIDC_DISCOVERY_URL: "https://auth.${DOMAIN}/application/o/trek/.well-known/openid-configuration"
+      # OIDC_CLIENT_SECRET NON va qui: va nel Secret referenziato da existingSecret sotto
 
     existingSecret: trek-secret
-    existingSecretKey: JWT_SECRET
+    existingSecretKey: JWT_SECRET   # vedi nota sotto
 
     persistence:
-      # PVCs are managed by Kustomize (pvc.yaml) with ReadWriteMany.
-      # The chart's pvc.yaml template is broken (hardcodes RWO, ignores
-      # existingClaim/accessMode). Disable to stop chart from creating PVCs.
-      # The deployment template still mounts trek-data and trek-uploads.
-      enabled: false
+      enabled: true
+      data:
+        existingClaim: trek-data
+      uploads:
+        existingClaim: trek-uploads
