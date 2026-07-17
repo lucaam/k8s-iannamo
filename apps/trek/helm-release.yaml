@@ -17,7 +17,7 @@ spec:
   values:
     image:
       repository: mauriceboe/trek
-      tag: 3.2.1
+      tag: 3.3.0
       pullPolicy: Always
 
     resources:
