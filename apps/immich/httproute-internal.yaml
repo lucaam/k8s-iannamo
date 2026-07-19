@@ -8,8 +8,11 @@ spec:
     - name: traefik-gateway
       namespace: traefik
       sectionName: web
+    - name: traefik-gateway
+      namespace: traefik
+      sectionName: websecure
   hostnames:
-    - immich.internal
+    - immich.lan
   rules:
     - matches:
         - path:
