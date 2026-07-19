@@ -8,4 +8,5 @@ resources:
   - helm-repository.yaml
   - helm-release.yaml
   - httproute.yaml
+  - httproute-internal.yaml
   - middleware-buffering.yaml
