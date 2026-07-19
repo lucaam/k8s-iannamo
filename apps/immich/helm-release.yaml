@@ -39,7 +39,8 @@ spec:
             env:
               REDIS_HOSTNAME: '{{ printf "%s-valkey" .Release.Name }}'
               IMMICH_MACHINE_LEARNING_URL: '{{ printf "http://%s-machine-learning:3003" .Release.Name }}'
-              MACHINE_LEARNING_PRELOAD__CLIP: "ViT-B-32__openai"
+              MACHINE_LEARNING_PRELOAD__CLIP__TEXTUAL: "ViT-B-32__openai"
+              MACHINE_LEARNING_PRELOAD__CLIP__VISUAL: "ViT-B-32__openai"
               DB_HOSTNAME:
                 valueFrom:
                   secretKeyRef:
