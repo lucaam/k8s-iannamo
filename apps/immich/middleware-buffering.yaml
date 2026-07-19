@@ -9,3 +9,4 @@ spec:
     maxResponseBodyBytes: 104857600
     memRequestBodyBytes: 1048576
     memResponseBodyBytes: 1048576
+    retryExpression: "IsNetworkError()"
