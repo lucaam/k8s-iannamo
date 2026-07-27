@@ -24,9 +24,6 @@ spec:
       requests:
         cpu: "15m"
         memory: "320Mi"
-      limits:
-        cpu: "50m"
-        memory: "768Mi"
 
     service:
       type: ClusterIP

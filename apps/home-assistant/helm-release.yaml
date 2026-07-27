@@ -32,9 +32,6 @@ spec:
       requests:
         cpu: "250m"
         memory: "2432Mi"
-      limits:
-        cpu: "1000m"
-        memory: "5376Mi"
 
     hostPort:
       # Enable 'hostPort' or not
@@ -346,9 +343,6 @@ spec:
           requests:
             cpu: "100m"
             memory: "224Mi"
-          limits:
-            cpu: "200m"
-            memory: "416Mi"
         # Image settings for the code-server addon
         image:
           # Repository for the code-server image

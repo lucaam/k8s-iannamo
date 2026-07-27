@@ -67,9 +67,6 @@ spec:
               requests:
                 cpu: "10m"
                 memory: "1280Mi"
-              limits:
-                cpu: "50m"
-                memory: "2560Mi"
     immich:
       metrics:
         # Enabling this will create the service monitors needed to monitor immich with the prometheus operator
@@ -121,9 +118,6 @@ spec:
                 requests:
                   cpu: "250m"
                   memory: "1280Mi"
-                limits:
-                  cpu: "1000m"
-                  memory: "2560Mi"
 
     machine-learning:
       enabled: true
@@ -143,9 +137,6 @@ spec:
                 requests:
                   cpu: "500m"
                   memory: "2048Mi"
-                limits:
-                  cpu: "2000m"
-                  memory: "4096Mi"
       persistence:
         cache:
           enabled: true
