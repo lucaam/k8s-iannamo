@@ -8,32 +8,35 @@ spec:
   chart:
     spec:
       chart: traefik
-      version: 37.4.0
+      version: 41.0.2                         # ← aggiornato
       sourceRef:
         kind: HelmRepository
         name: traefik
         namespace: flux-system
   upgrade:
-    crds: Skip
+    crds: Skip                                 # opzionale: valuta se gestire le CRD separatamente
     remediation:
       retries: 3
   install:
     crds: Skip
   values:
 
-    logs:
-      general:
-        level: WARN
+    # --- LOGGING (modificato) ---
+    log:                                       # prima era logs.general
+      level: WARN
 
-    access:
+    accessLog:                                 # prima era access
       enabled: true
 
+    # --- CRD ---
     crds:
       enabled: false
 
+    # --- DEPLOYMENT ---
     deployment:
       replicas: 2
 
+    # --- PROVIDERS ---
     providers:
       kubernetesGateway:
         enabled: true
@@ -43,6 +46,7 @@ spec:
         enabled: true
         allowCrossNamespace: true
 
+    # --- PORTS ---
     ports:
       web:
         port: 8000
@@ -62,8 +66,9 @@ spec:
             idleTimeout: 600s
             writeTimeout: 600s
         middlewares:
-          - traefik-traefik-errors@kubernetescrd   # gestisce 500/503 su tutte le route
+          - traefik-traefik-errors@kubernetescrd
 
+    # --- INGRESS ROUTE DASHBOARD ---
     ingressRoute:
       dashboard:
         enabled: true
@@ -73,15 +78,18 @@ spec:
           - name: authentik-forward-auth
           - name: traefik-errors
 
+    # --- GATEWAY ---
     gateway:
       namespacePolicy: All
 
+    # --- SERVICE ---
     service:
       annotations:
         metallb.io/ip-allocated-from-pool: external-pool
         metallb.io/allow-shared-ip: external-pool
         metallb.io/loadBalancerIPs: 192.168.178.10
 
+    # --- RESOURCES ---
     resources:
       requests:
         cpu: 100m
