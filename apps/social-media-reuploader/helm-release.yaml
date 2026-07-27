@@ -30,9 +30,6 @@ spec:
       requests:
         cpu: "281m"
         memory: "128Mi"
-      limits:
-        cpu: "600m"
-        memory: "256Mi"
     service:
       type: ClusterIP
       port: 80

@@ -151,9 +151,6 @@ spec:
 
       # -- Resource limits and requests for server pods
       resources:
-        limits:
-          cpu: "150m"
-          memory: "2048Mi"
         requests:
           cpu: "61m"
           memory: "896Mi"
@@ -368,9 +365,6 @@ spec:
 
       # -- Resource limits and requests for the authentik worker
       resources:
-        limits:
-          cpu: "1000m"
-          memory: "3Gi"
         requests:
           cpu: "250m"
           memory: "896Mi"
@@ -496,9 +490,6 @@ spec:
           requests:
             cpu: "250m"
             memory: "512Mi"
-          limits:
-            cpu: "1000m"
-            memory: "2Gi"
       readReplicas:
         resourcesPreset: "none"
       backup:

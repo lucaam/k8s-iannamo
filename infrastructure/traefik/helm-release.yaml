@@ -83,9 +83,6 @@ spec:
         metallb.io/loadBalancerIPs: 192.168.178.10
 
     resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
       requests:
         cpu: 100m
         memory: 256Mi
