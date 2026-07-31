@@ -1,0 +1,23 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/name: soulsync
+  name: soulsync-httproute
+  namespace: soulsync
+spec:
+  hostnames:
+  - soulsync.${DOMAIN}
+  parentRefs:
+  - name: traefik-gateway
+    namespace: traefik
+    sectionName: websecure
+  rules:
+  - backendRefs:
+    - name: soulsync
+      port: 80
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+
