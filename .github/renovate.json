@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
+    "config:recommended",
     ":semanticCommits",
     "helpers:pinGitHubActionDigests"
   ],
@@ -11,34 +11,26 @@
   "automergeStrategy": "squash",
   "separateMajorMinor": true,
   "flux": {
-    "fileMatch": [
-      "(^|/)apps/.+\\.ya?ml$",
-      "(^|/)infrastructure/.+\\.ya?ml$",
-      "(^|/)clusters/.+\\.ya?ml$"
+    "managerFilePatterns": [
+      "/(^|/)apps/.+\\.ya?ml$/",
+      "/(^|/)infrastructure/.+\\.ya?ml$/",
+      "/(^|/)clusters/.+\\.ya?ml$/"
     ]
   },
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Docker images with repository + tag on separate lines in HelmRelease values",
-      "fileMatch": [
-        "(^|/)apps/.*helm-release\\.ya?ml$",
-        "(^|/)infrastructure/.*helm-release\\.ya?ml$"
-      ],
-      "matchStrings": [
-        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,3}?\\s*tag:\\s*['\"]?(?<currentValue>[^'\"\\s@]+)"
-      ],
+      "managerFilePatterns": ["/(^|/)apps/.*helm-release\\.ya?ml$/", "/(^|/)infrastructure/.*helm-release\\.ya?ml$/"],
+      "matchStrings": ["repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,3}?\\s*tag:\\s*['\"]?(?<currentValue>[^'\"\\s@]+)"],
       "datasourceTemplate": "docker",
       "packageNameTemplate": "{{{depName}}}"
-    }
-    ,
+    },
     {
+      "customType": "regex",
       "description": "Docker images in Helm chart values.yaml files (charts/*/values.yaml)",
-      "fileMatch": [
-        "(^|/).*charts/.*/values\\.ya?ml$"
-      ],
-      "matchStrings": [
-        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*tag:\\s*['\"]?(?<currentValue>v?[^'\"\\s@]+)"
-      ],
+      "managerFilePatterns": ["/(^|/).*charts/.*/values\\.ya?ml$/"],
+      "matchStrings": ["repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*tag:\\s*['\"]?(?<currentValue>v?[^'\"\\s@]+)"],
       "datasourceTemplate": "docker",
       "packageNameTemplate": "{{{depName}}}"
     }
