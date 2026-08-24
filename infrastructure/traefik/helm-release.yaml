@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: traefik
-      version: 41.0.2                         # ← aggiornato
+      version: 41.3.0                         # ← aggiornato
       sourceRef:
         kind: HelmRepository
         name: traefik
