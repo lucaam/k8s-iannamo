@@ -23,7 +23,10 @@ spec:
     resources:
       requests:
         cpu: "15m"
-        memory: "320Mi"
+        memory: "512Mi"
+      limits:
+        cpu: "500m"
+        memory: "1Gi"
 
     service:
       type: ClusterIP
