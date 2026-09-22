@@ -108,12 +108,11 @@ spec:
       enabled: true
 
       service:
-        type: LoadBalancer
-        port: 2283
-        annotations:
-          metallb.io/ip-allocated-from-pool: external-pool
-          metallb.io/allow-shared-ip: external-pool
-          metallb.io/loadBalancerIPs: 192.168.178.15
+        main:
+          type: LoadBalancer
+          annotations:
+            metallb.io/ip-allocated-from-pool: external-pool
+            metallb.io/loadBalancerIPs: 192.168.178.15
 
       controllers:
         main:
