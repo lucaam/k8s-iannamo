@@ -17,7 +17,7 @@ spec:
     image:
       repository: ghcr.io/matter-js/matterjs-server
       pullPolicy: IfNotPresent
-      tag: "0.6.8"
+      tag: "1.4.0"
 
     log:
       logLevel: info
