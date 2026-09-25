@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: soulsync-config
+  namespace: soulsync
+  labels:
+    app.kubernetes.io/name: soulsync-config
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-flash
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: soulsync-data
+  namespace: soulsync
+  labels:
+    app.kubernetes.io/name: soulsync-data
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: nfs-spacex
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: soulsync-storage
+  namespace: soulsync
+  labels:
+    app.kubernetes.io/name: soulsync-storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: nfs-spacex

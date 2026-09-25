@@ -1,0 +1,23 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prowlarr-httproute
+  namespace: prowlarr
+  labels:
+    app.kubernetes.io/name: prowlarr
+spec:
+  hostnames:
+  - "prowlarr.${DOMAIN}"
+  parentRefs:
+  - name: traefik-gateway
+    namespace: traefik
+    sectionName: websecure
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: prowlarr
+      port: 9696
+    

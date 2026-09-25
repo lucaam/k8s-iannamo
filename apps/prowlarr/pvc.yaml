@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prowlarr-storage
+  namespace: prowlarr
+  labels:
+    app.kubernetes.io/name: prowlarr-storage
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: nfs-flash
+# Prowlarr stores indexer metadata (DB). Use `nfs-flash` for DB-like PVCs.
