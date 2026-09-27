@@ -134,6 +134,8 @@ spec:
                 repository: ghcr.io/immich-app/immich-server
                 tag: v3.2.2
                 pullPolicy: IfNotPresent
+              securityContext:
+                privileged: true
               resources:
                 requests:
                   cpu: "250m"
