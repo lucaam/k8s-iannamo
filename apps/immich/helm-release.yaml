@@ -29,8 +29,19 @@ spec:
 
     # These entries are shared between all the Immich components
 
+    persistence:
+      dri:
+        type: hostPath
+        hostPath: /dev/dri
+        hostPathType: Directory
+        globalMounts:
+          - path: /dev/dri
+
     controllers:
       main:
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: talos-homelab-worker-1
         containers:
           main:
             image:
