@@ -15,7 +15,7 @@ spec:
         namespace: flux-system
   values:
     image:
-      repository: ghcr.io/matter-js/matterjs-server
+      repository: matter-js/matterjs-server   # il chart antepone già ghcr.io
       pullPolicy: IfNotPresent
       tag: "1.4.0"
 
@@ -30,18 +30,16 @@ spec:
       type: LoadBalancer
       port: 5580
       annotations:
-        metallb.io/ip-allocated-from-pool: external-pool
-        metallb.io/allow-shared-ip: external-pool
+        metallb.io/address-pool: external-pool
         metallb.io/loadBalancerIPs: 192.168.178.14
 
-# Enable hostNetwork and hostPort for Matter Server requirements
+    # Matter richiede mDNS/multicast sulla LAN
     hostNetwork: true
     hostPort: true
 
-    # Use an existing PVC for data (avoid chart-created PVCs/volumeClaimTemplates)
     persistence:
-      enabled: true
-      existingClaim: home-assistant-matter-server-data
+      storageClassName: nfs-spacex
+      size: 2Gi
 
     podSecurityContext:
       fsGroup: 1000
@@ -77,9 +75,3 @@ spec:
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 3
-
-    nodeSelector: {}
-
-    tolerations: []
-
-    affinity: {}
