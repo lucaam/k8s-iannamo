@@ -16,7 +16,7 @@ spec:
   values:
     image:
       repository: koenkk/zigbee2mqtt
-      tag: 2.14.1
+      tag: 2.14.2
     service:
       # -- annotations for the service created
       annotations:
