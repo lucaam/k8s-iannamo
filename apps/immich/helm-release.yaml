@@ -35,7 +35,7 @@ spec:
           main:
             image:
               repository: ghcr.io/immich-app/immich-server
-              tag: v3.2.4
+              tag: v3.3.1
             env:
               REDIS_HOSTNAME: '{{ printf "%s-valkey" .Release.Name }}'
               IMMICH_MACHINE_LEARNING_URL: '{{ printf "http://%s-machine-learning:3003" .Release.Name }}'
@@ -132,7 +132,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-server
-                tag: v3.2.4
+                tag: v3.3.1
                 pullPolicy: IfNotPresent
               securityContext:
                 privileged: true
@@ -149,7 +149,7 @@ spec:
             main:
               image:
                 repository: ghcr.io/immich-app/immich-machine-learning
-                tag: v3.2.4
+                tag: v3.3.1
                 pullPolicy: IfNotPresent
               env:
                 TRANSFORMERS_CACHE: /cache
