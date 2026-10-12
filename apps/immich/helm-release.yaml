@@ -155,6 +155,7 @@ spec:
                 TRANSFORMERS_CACHE: /cache
                 HF_XET_CACHE: /cache/huggingface-xet
                 MPLCONFIGDIR: /cache/matplotlib-config
+                MACHINE_LEARNING_MODEL_REVISION: v2
               resources:
                 requests:
                   cpu: "500m"
