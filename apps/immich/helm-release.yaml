@@ -115,10 +115,6 @@ spec:
           globalMounts:
             - path: /dev/dri
 
-      pod:
-        nodeSelector:
-          kubernetes.io/hostname: talos-homelab-worker-1
-
       service:
         main:
           type: LoadBalancer
@@ -128,6 +124,10 @@ spec:
 
       controllers:
         main:
+          # FIX: il nodeSelector va qui (controllers.main.pod), non in server.pod
+          pod:
+            nodeSelector:
+              kubernetes.io/hostname: talos-homelab-worker-1
           containers:
             main:
               image:
