@@ -141,7 +141,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Flux CLI
-        uses: fluxcd/flux2/action@a0c663ab6cc18b65bc22970eab30360e53aed196 # main
+        uses: fluxcd/flux2/action@dddacea72e84737d0033db91be5a97c984a3ebfd # main
 
       - name: Validate Flux custom resources
         run: |
