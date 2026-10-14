@@ -14,3 +14,13 @@ resources:
   - external-services
   - trek
   - social-media-reuploader
+  - musicseerr
+  - soulsync
+  - aurral
+  - profilarr
+  - slskd
+  - media-servarr
+  - media
+  - jellyfin
+  - k8s-at-home
+  - transmission
