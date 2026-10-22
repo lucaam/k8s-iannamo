@@ -1,0 +1,23 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  labels:
+    app.kubernetes.io/name: aurral
+  name: aurral-httproute
+  namespace: aurral
+spec:
+  hostnames:
+  - aurral.${DOMAIN}
+  parentRefs:
+  - name: traefik-gateway
+    namespace: traefik
+    sectionName: websecure
+  rules:
+  - backendRefs:
+    - name: aurral
+      port: 80
+    matches:
+    - path:
+        type: PathPrefix
+        value: /
+

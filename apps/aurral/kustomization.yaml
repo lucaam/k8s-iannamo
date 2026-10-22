@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - secret-aurral.sops.yaml
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  - httproute.yaml
+metadata:
+  name: aurral
+  labels:
+    app.kubernetes.io/name: aurral
+
