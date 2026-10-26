@@ -16,40 +16,48 @@ spec:
   interval: 1h
   targetNamespace: teslamate
 
-  # Aggiungi la remediation per evitare che un fallimento blocchi tutto
+  # Rollback automatico se un upgrade fallisce
   upgrade:
     remediation:
       retries: 3
       remediateLastFailure: true
 
+  # Rollback automatico se un install fallisce
+  install:
+    remediation:
+      retries: 3
+
   values:
+    # --- TeslaMate (protetto da forward auth Authentik) ---
     teslamate:
       existingSecret: teslamate-encryption
       existingSecretKey: ENCRYPTION_KEY
       ingress:
-        enabled: false
+        enabled: false        # routing via HTTPRoute + middleware
 
+    # --- Database CloudNativePG ---
     database:
       type: cnpg
       cnpg:
         storage:
           size: 5Gi
-          storageClass: nfs-flash
+          storageClass: nfs-flash    # nessuna SC di default nel cluster
 
+    # --- Grafana (OIDC nativo verso Authentik) ---
     grafana:
       enabled: true
       ingress:
         enabled: false
 
+      # Permessi NFS: fsGroup va a livello di POD (non container)
       podSecurityContext:
         fsGroup: 472
         fsGroupChangePolicy: "OnRootMismatch"
-
       securityContext:
         runAsUser: 472
         runAsGroup: 472
 
-      # Disabilitato: con fsGroup attivo non serve e su NFS fallirebbe
+      # Disabilitato: su NFS con root_squash il chown fallisce
       initChownData:
         enabled: false
 
@@ -57,16 +65,47 @@ spec:
         enabled: true
         storageClass: nfs-flash
         accessModes:
-          - ReadWriteMany
+          - ReadWriteMany         # NFS supporta multi-attach
         size: 1Gi
 
+      # Configurazione Grafana con OIDC nativo
       grafana.ini:
-        auth.anonymous:
-          enabled: true
-          org_role: Viewer
-        auth:
-          disable_login_form: true
-          disable_signout_menu: true
+        server:
+          root_url: "https://grafana-teslamate.${DOMAIN}/"
 
+        auth:
+          disable_login_form: true   # nasconde form locale
+          oauth_auto_login: true     # redirect IMMEDIATO a Authentik
+          disable_basic_auth: true   # disabilita HTTP Basic Auth
+
+        auth.anonymous:
+          enabled: false             # nessun accesso anonimo (OIDC gestisce)
+
+        auth.generic_oauth:
+          enabled: true
+          name: "Authentik"
+          client_id: "$__env{GF_AUTH_GENERIC_OAUTH_CLIENT_ID}"
+          client_secret: "$__env{GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET}"
+          scopes: "openid profile email groups"
+          auth_url: "https://auth.${DOMAIN}/application/o/authorize/"
+          token_url: "https://auth.${DOMAIN}/application/o/token/"
+          api_url: "https://auth.${DOMAIN}/application/o/userinfo/"
+          role_attribute_path: "contains(groups[*], 'Grafana Admins') && 'Admin' || contains(groups[*], 'Grafana Editors') && 'Editor' || 'Viewer'"
+          allow_assign_grafana_admin: true
+
+      # Inietta credenziali OIDC da secret (mai in chiaro nel ConfigMap)
+      env:
+        GF_AUTH_GENERIC_OAUTH_CLIENT_ID:
+          valueFrom:
+            secretKeyRef:
+              name: grafana-oidc-secret
+              key: client-id
+        GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
+          valueFrom:
+            secretKeyRef:
+              name: grafana-oidc-secret
+              key: client-secret
+
+    # --- Mosquitto (MQTT per TeslaMate) ---
     mosquitto:
       enabled: true
