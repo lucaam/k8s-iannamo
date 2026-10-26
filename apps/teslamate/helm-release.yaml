@@ -60,32 +60,43 @@ spec:
           - ReadWriteMany
         size: 1Gi
 
-      grafana.ini:
-        server:
-          root_url: "https://grafana-teslamate.${DOMAIN}/"
+      # ⚠️ grafana.ini rimosso: non supportato dalla chart 0.3.0
+      # Tutta la configurazione via extraEnv (GF_*)
 
-        auth:
-          disable_login_form: true
-          oauth_auto_login: true
-          disable_basic_auth: true
-
-        auth.anonymous:
-          enabled: false
-
-        auth.generic_oauth:
-          enabled: true
-          name: "Authentik"
-          client_id: "$__env{GF_AUTH_GENERIC_OAUTH_CLIENT_ID}"
-          client_secret: "$__env{GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET}"
-          scopes: "openid profile email groups"
-          auth_url: "https://auth.${DOMAIN}/application/o/authorize/"
-          token_url: "https://auth.${DOMAIN}/application/o/token/"
-          api_url: "https://auth.${DOMAIN}/application/o/userinfo/"
-          role_attribute_path: "contains(groups[*], 'Grafana Admins') && 'Admin' || contains(groups[*], 'Grafana Editors') && 'Editor' || 'Viewer'"
-          allow_assign_grafana_admin: true
-
-      # ✅ extraEnv (lista) invece di env (mappa)
       extraEnv:
+        # --- Server ---
+        - name: GF_SERVER_ROOT_URL
+          value: "https://grafana-teslamate.${DOMAIN}/"
+
+        # --- Auth di base ---
+        - name: GF_AUTH_OAUTH_AUTO_LOGIN
+          value: "true"
+        - name: GF_AUTH_DISABLE_LOGIN_FORM
+          value: "true"
+        - name: GF_AUTH_DISABLE_BASIC_AUTH
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "false"
+
+        # --- Generic OAuth (Authentik) ---
+        - name: GF_AUTH_GENERIC_OAUTH_ENABLED
+          value: "true"
+        - name: GF_AUTH_GENERIC_OAUTH_NAME
+          value: "Authentik"
+        - name: GF_AUTH_GENERIC_OAUTH_SCOPES
+          value: "openid profile email groups"
+        - name: GF_AUTH_GENERIC_OAUTH_AUTH_URL
+          value: "https://auth.${DOMAIN}/application/o/authorize/"
+        - name: GF_AUTH_GENERIC_OAUTH_TOKEN_URL
+          value: "https://auth.${DOMAIN}/application/o/token/"
+        - name: GF_AUTH_GENERIC_OAUTH_API_URL
+          value: "https://auth.${DOMAIN}/application/o/userinfo/"
+        - name: GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH
+          value: "contains(groups[*], 'Grafana Admins') && 'Admin' || contains(groups[*], 'Grafana Editors') && 'Editor' || 'Viewer'"
+        - name: GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN
+          value: "true"
+
+        # --- Credenziali da secret (già presenti) ---
         - name: GF_AUTH_GENERIC_OAUTH_CLIENT_ID
           valueFrom:
             secretKeyRef:
