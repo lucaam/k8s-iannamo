@@ -27,6 +27,7 @@ spec:
       cnpg:
         storage:
           size: 5Gi
+          storageClass: nfs-flash    # esplicito: nessuna SC di default nel cluster
 
     grafana:
       enabled: true
@@ -34,6 +35,9 @@ spec:
         enabled: false
       # Grafana protetta da Authentik via forward auth sul HTTPRoute.
       # Accesso anonimo (Viewer) per evitare il doppio login.
+      persistence:
+        enabled: true
+        storageClass: nfs-flash      # esplicito: nessuna SC di default nel cluster
       grafana.ini:
         auth.anonymous:
           enabled: true
