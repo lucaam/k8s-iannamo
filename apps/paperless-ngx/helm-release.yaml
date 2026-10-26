@@ -16,6 +16,11 @@ spec:
   interval: 1h
   targetNamespace: paperless-ngx
   values:
+    # Persistenza dati Paperless-ngx (PVC `paperless-ngx`)
+    persistence:
+      enabled: true
+      storageClass: nfs-flash
+
     app:
       url: "https://paperless.${DOMAIN}"
       timeZone: "Europe/Rome"
@@ -32,6 +37,8 @@ spec:
         enabled: true
         providerId: "authentik"
         displayName: "Authentik SSO"
+        # Format richiesto da Paperless: base URL dell'app OIDC in Authentik,
+        # con slug e slash finale (NON solo l'origine, NON il discovery URL completo)
         serverUrl: "https://auth.${DOMAIN}/application/o/paperless/"
         existingSecret: "paperless-oidc-secret"
         clientIdKey: "client-id"
@@ -49,6 +56,5 @@ spec:
     # Routing gestito via HTTPRoute separato (pattern k8s-iannamo)
     route:
       enabled: false
-
     ingress:
       enabled: false
