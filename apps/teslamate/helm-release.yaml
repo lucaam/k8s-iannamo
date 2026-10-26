@@ -15,31 +15,41 @@ spec:
         namespace: flux-system
   interval: 1h
   targetNamespace: teslamate
+
+  # Aggiungi la remediation per evitare che un fallimento blocchi tutto
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+
   values:
     teslamate:
       existingSecret: teslamate-encryption
       existingSecretKey: ENCRYPTION_KEY
       ingress:
-        enabled: false        # routing gestito via HTTPRoute
+        enabled: false
 
     database:
       type: cnpg
       cnpg:
         storage:
           size: 5Gi
-          storageClass: nfs-flash    # nessuna SC di default nel cluster
+          storageClass: nfs-flash
 
     grafana:
       enabled: true
       ingress:
         enabled: false
 
-      # Fix permessi NFS: forza il gruppo 472 (grafana) sul volume montato
-      securityContext:
+      podSecurityContext:
         fsGroup: 472
         fsGroupChangePolicy: "OnRootMismatch"
 
-      # Disabilitato: su NFS con root_squash il chown fallisce con "Permission denied"
+      securityContext:
+        runAsUser: 472
+        runAsGroup: 472
+
+      # Disabilitato: con fsGroup attivo non serve e su NFS fallirebbe
       initChownData:
         enabled: false
 
@@ -47,11 +57,9 @@ spec:
         enabled: true
         storageClass: nfs-flash
         accessModes:
-          - ReadWriteMany         # NFS supporta multi-attach
+          - ReadWriteMany
         size: 1Gi
 
-      # Grafana protetta da Authentik via forward auth sul HTTPRoute.
-      # Accesso anonimo (Viewer) per evitare il doppio login.
       grafana.ini:
         auth.anonymous:
           enabled: true
