@@ -27,19 +27,31 @@ spec:
       cnpg:
         storage:
           size: 5Gi
-          storageClass: nfs-flash    # esplicito: nessuna SC di default nel cluster
+          storageClass: nfs-flash    # nessuna SC di default nel cluster
 
     grafana:
       enabled: true
       ingress:
         enabled: false
-      # Grafana protetta da Authentik via forward auth sul HTTPRoute.
-      # Accesso anonimo (Viewer) per evitare il doppio login.
+
+      # Fix permessi NFS: forza il gruppo 472 (grafana) sul volume montato
+      securityContext:
+        fsGroup: 472
+        fsGroupChangePolicy: "OnRootMismatch"
+
+      # Disabilitato: su NFS con root_squash il chown fallisce con "Permission denied"
+      initChownData:
+        enabled: false
+
       persistence:
         enabled: true
-        storageClass: nfs-flash      # esplicito: nessuna SC di default nel cluster
+        storageClass: nfs-flash
         accessModes:
-          - ReadWriteMany
+          - ReadWriteMany         # NFS supporta multi-attach
+        size: 1Gi
+
+      # Grafana protetta da Authentik via forward auth sul HTTPRoute.
+      # Accesso anonimo (Viewer) per evitare il doppio login.
       grafana.ini:
         auth.anonymous:
           enabled: true
