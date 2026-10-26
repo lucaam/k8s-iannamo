@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: paperless-authentik-blueprint
+  namespace: authentik
+data:
+  paperless.yaml: |
+    version: 1
+    metadata:
+      name: Paperless-ngx
+    entries:
+      - model: authentik_core.application
+        identifiers:
+          slug: paperless
+        attrs:
+          name: Paperless-ngx
+          provider: !Find [authentik_providers_oauth2.oauth2provider, [name, "paperless-provider"]]
+          meta_launch_url: "https://paperless.${DOMAIN}"
+      - model: authentik_providers_oauth2.oauth2provider
+        identifiers:
+          name: paperless-provider
+        attrs:
+          client_type: confidential
+          client_id: !Env PAPERLESS_OIDC_CLIENT_ID
+          client_secret: !Env PAPERLESS_OIDC_CLIENT_SECRET
+          redirect_uris:
+            - matching_mode: strict
+              url: "https://paperless.${DOMAIN}/accounts/oidc/authentik/login/callback/"
+          property_mappings:
+            - !Find [authentik_core.propertymapping, [name, "authentik default OAuth Mapping: openid"]]
+            - !Find [authentik_core.propertymapping, [name, "authentik default OAuth Mapping: email"]]
+            - !Find [authentik_core.propertymapping, [name, "authentik default OAuth Mapping: profile"]]
