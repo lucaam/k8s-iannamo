@@ -21,16 +21,25 @@
     {
       "customType": "regex",
       "description": "Docker images with repository + tag on separate lines in HelmRelease values",
-      "managerFilePatterns": ["/(^|/)apps/.*helm-release\\.ya?ml$/", "/(^|/)infrastructure/.*helm-release\\.ya?ml$/"],
-      "matchStrings": ["repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,3}?\\s*tag:\\s*['\"]?(?<currentValue>[^'\"\\s@]+)"],
+      "managerFilePatterns": [
+        "/(^|/)apps/.*helm-release\\.ya?ml$/",
+        "/(^|/)infrastructure/.*helm-release\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,3}?\\s*tag:\\s*['\"]?(?<currentValue>[^'\"\\s@]+)"
+      ],
       "datasourceTemplate": "docker",
       "packageNameTemplate": "{{{depName}}}"
     },
     {
       "customType": "regex",
       "description": "Docker images in Helm chart values.yaml files (charts/*/values.yaml)",
-      "managerFilePatterns": ["/(^|/).*charts/.*/values\\.ya?ml$/"],
-      "matchStrings": ["repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*tag:\\s*['\"]?(?<currentValue>v?[^'\"\\s@]+)"],
+      "managerFilePatterns": [
+        "/(^|/).*charts/.*/values\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*tag:\\s*['\"]?(?<currentValue>v?[^'\"\\s@]+)"
+      ],
       "datasourceTemplate": "docker",
       "packageNameTemplate": "{{{depName}}}"
     }
@@ -89,6 +98,59 @@
     {
       "description": "Authentik: only patch automerge (minor may require migrations)",
       "matchPackageNames": ["authentik", "ghcr.io/goauthentik/server"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": false,
+      "labels": ["needs-review"]
+    },
+    {
+      "description": "TeslaMate: only patch automerge (chart bundles Grafana, CNPG, mosquitto)",
+      "matchDatasources": ["helm"],
+      "matchPackageNames": ["teslamate"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": false,
+      "labels": ["needs-review", "helm"]
+    },
+    {
+      "description": "TeslaMate images: only patch automerge (Grafana fork pinned to old version)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["teslamate/teslamate", "teslamate/grafana"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": false,
+      "labels": ["needs-review", "docker"]
+    },
+    {
+      "description": "Paperless-ngx: only patch automerge (minor often requires DB migrations)",
+      "matchDatasources": ["helm"],
+      "matchPackageNames": ["paperless-ngx"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": false,
+      "labels": ["needs-review", "helm"]
+    },
+    {
+      "description": "Paperless-ngx images: only patch automerge (migrations on minor)",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/paperless-ngx/paperless-ngx"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": false,
+      "labels": ["needs-review", "docker"]
+    },
+    {
+      "description": "CloudNativePG operator: only patch automerge (minor bumps CRDs)",
+      "matchPackageNames": ["cloudnative-pg", "ghcr.io/cloudnative-pg/cloudnative-pg"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": false,
+      "labels": ["needs-review"]
+    },
+    {
+      "description": "Flux: only patch automerge (minor bumps CRDs)",
+      "matchPackageNames": ["flux2", "flux-operator", "fluxcd/flux2", "ghcr.io/fluxcd/flux-cli"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": false,
+      "labels": ["needs-review"]
+    },
+    {
+      "description": "Traefik: only patch automerge (minor can break Middleware/Gateway API)",
+      "matchPackageNames": ["traefik", "traefik/traefik", "library/traefik"],
       "matchUpdateTypes": ["minor"],
       "automerge": false,
       "labels": ["needs-review"]
