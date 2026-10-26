@@ -7,3 +7,4 @@ resources:
   - httproute.yaml
   - middleware-authentik.yaml
   - secret-teslamate.sops.yaml
+  - secret-grafana-oidc.sops.yaml
