@@ -38,6 +38,8 @@ spec:
       persistence:
         enabled: true
         storageClass: nfs-flash      # esplicito: nessuna SC di default nel cluster
+        accessModes:
+          - ReadWriteMany
       grafana.ini:
         auth.anonymous:
           enabled: true
