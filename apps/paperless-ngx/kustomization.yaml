@@ -7,4 +7,3 @@ resources:
   - postgresql-cluster.yaml
   - httproute.yaml
   - secret-paperless.sops.yaml
-  - authentik-blueprint.yaml
