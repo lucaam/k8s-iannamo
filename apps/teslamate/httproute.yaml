@@ -1,3 +1,4 @@
+# --- TeslaMate UI: protetto da forward auth Authentik ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -25,6 +26,7 @@ spec:
         - name: teslamate
           port: 4000
 ---
+# --- Grafana UI: NESSUN middleware, OIDC nativo gestito da Grafana ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -42,12 +44,7 @@ spec:
         - path:
             type: PathPrefix
             value: /
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: traefik.io
-            kind: Middleware
-            name: teslamate-authentik
+      # Nessun filters -> extensionRef
       backendRefs:
         - name: teslamate-grafana
           port: 3000
