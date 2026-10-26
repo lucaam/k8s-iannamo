@@ -7,6 +7,7 @@ spec:
   instances: 2
   storage:
     size: 5Gi
+    storageClass: nfs-flash       # esplicito: nessuna SC di default nel cluster
   bootstrap:
     initdb:
       database: paperless
