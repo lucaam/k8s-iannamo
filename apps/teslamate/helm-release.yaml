@@ -1,0 +1,46 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: teslamate
+  namespace: teslamate
+spec:
+  releaseName: teslamate
+  chart:
+    spec:
+      chart: teslamate
+      version: "0.3.0"
+      sourceRef:
+        kind: HelmRepository
+        name: teslamate
+        namespace: flux-system
+  interval: 1h
+  targetNamespace: teslamate
+  values:
+    teslamate:
+      existingSecret: teslamate-encryption
+      existingSecretKey: ENCRYPTION_KEY
+      ingress:
+        enabled: false        # routing gestito via HTTPRoute
+
+    database:
+      type: cnpg
+      cnpg:
+        storage:
+          size: 5Gi
+
+    grafana:
+      enabled: true
+      ingress:
+        enabled: false
+      # Grafana protetta da Authentik via forward auth sul HTTPRoute.
+      # Accesso anonimo (Viewer) per evitare il doppio login.
+      grafana.ini:
+        auth.anonymous:
+          enabled: true
+          org_role: Viewer
+        auth:
+          disable_login_form: true
+          disable_signout_menu: true
+
+    mosquitto:
+      enabled: true
