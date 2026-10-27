@@ -100,6 +100,13 @@
       "labels": ["needs-review", "docker"]
     },
     {
+      "description": "matter-js/matterjs-server is hosted on GHCR, not Docker Hub. Lookup there and skip digest pinning.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["matter-js/matterjs-server"],
+      "registryUrls": ["https://ghcr.io"],
+      "pinDigests": false
+    },
+    {
       "description": "Ollama: patch automerge, minor manual",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ollama/ollama"],
