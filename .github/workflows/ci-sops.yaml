@@ -17,13 +17,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify all *.sops.yaml are encrypted
+      - name: Verify all *.sops.yaml/*.sops.yml are encrypted
         run: |
           fail=0
           while IFS= read -r -d '' f; do
-            grep -qE '^sops:' "$f" || { echo "❌ $f NOT encrypted"; fail=1; }
-            grep -qE 'ENC\[AES256_GCM' "$f" || { echo "❌ $f no ENC block"; fail=1; }
-          done < <(find apps infrastructure clusters -name '*.sops.yaml' -print0 2>/dev/null)
+            # sops metadata block must exist
+            if ! grep -qE '^sops:' "$f"; then
+              echo "❌ $f NOT encrypted (no sops metadata)"
+              fail=1
+              continue
+            fi
+            # Must have an ENC[AES256_GCM block that is NOT just the `mac:` field
+            # (a file with only `mac:` and plaintext data would still pass a naive grep)
+            if ! grep -E 'ENC\[AES256_GCM' "$f" | grep -vE '^\s+mac:\s' | grep -q .; then
+              echo "❌ $f has only mac ENC, no encrypted values"
+              fail=1
+              continue
+            fi
+            echo "✅ $f is encrypted"
+          done < <(find apps infrastructure clusters \( -name '*.sops.yaml' -o -name '*.sops.yml' \) -print0 2>/dev/null)
           exit $fail
 
   decrypt-test:
@@ -53,5 +65,5 @@ jobs:
               echo "❌ Cannot decrypt $f"
               fail=1
             fi
-          done < <(find apps infrastructure clusters -name '*.sops.yaml' -print0 2>/dev/null)
+          done < <(find apps infrastructure clusters \( -name '*.sops.yaml' -o -name '*.sops.yml' \) -print0 2>/dev/null)
           exit $fail

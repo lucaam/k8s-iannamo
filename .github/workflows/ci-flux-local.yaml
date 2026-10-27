@@ -1,15 +1,17 @@
 name: ci-flux-local
+
 on:
   pull_request:
     paths:
-      - "apps/**"
-      - "infrastructure/**"
-      - ".github/workflows/ci-flux-local.yaml"
+      - 'apps/**'
+      - 'infrastructure/**'
+      - '.github/workflows/ci-flux-local.yaml'
   push:
     branches: [main]
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   validate:
@@ -20,17 +22,26 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - run: pip install flux-local
+          python-version: '3.12'
+      - name: Install flux-local
+        run: pip install flux-local
       - name: flux-local test
         run: flux-local test --path ./apps --all-namespaces --enable-helm
-      - name: flux-local diff
+      - name: flux-local diff (Kustomizations)
         if: github.event_name == 'pull_request'
         run: |
-          flux-local diff --path ./apps --all-namespaces --enable-helm > /tmp/flux-diff.txt || true
-          cat /tmp/flux-diff.txt
-          echo "lines=$(wc -l < /tmp/flux-diff.txt)" >> $GITHUB_OUTPUT
+          flux-local diff ks --path ./apps --all-namespaces --enable-helm > /tmp/flux-diff-ks.txt
+      - name: flux-local diff (HelmReleases)
+        if: github.event_name == 'pull_request'
+        run: |
+          flux-local diff hr --path ./apps --all-namespaces --enable-helm > /tmp/flux-diff-hr.txt
+      - name: Combine diffs and count lines
+        if: github.event_name == 'pull_request'
         id: diff
+        run: |
+          cat /tmp/flux-diff-ks.txt /tmp/flux-diff-hr.txt > /tmp/flux-diff.txt
+          lines=$(wc -l < /tmp/flux-diff.txt)
+          echo "lines=$lines" >> "$GITHUB_OUTPUT"
       - name: Comment diff on PR
         if: github.event_name == 'pull_request' && steps.diff.outputs.lines != '0'
         uses: marocchino/sticky-pull-request-comment@v2

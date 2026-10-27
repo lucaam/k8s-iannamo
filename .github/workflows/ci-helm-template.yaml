@@ -1,10 +1,11 @@
 name: ci-helm-template
+
 on:
   pull_request:
     paths:
-      - "apps/*/helm-release.yaml"
-      - "infrastructure/*/helm-release.yaml"
-      - ".github/workflows/ci-helm-template.yaml"
+      - 'apps/*/helm-release.yaml'
+      - 'infrastructure/*/helm-release.yaml'
+      - '.github/workflows/ci-helm-template.yaml'
 
 permissions:
   contents: read
@@ -12,19 +13,71 @@ permissions:
 jobs:
   template:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
+      - name: Install helm
+        uses: azure/setup-helm@v4
         with:
           version: v3.16.3
-      - name: Validate values YAML
+      - name: Install yq
+        run: |
+          curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+      - name: Validate HelmRelease values with helm template
         run: |
           fail=0
-          for f in $(find apps infrastructure -name "helm-release.yaml" 2>/dev/null); do
-            echo "--- $f ---"
-            yq ".spec.values" "$f" > /tmp/values.yaml
-            yq -e "." /tmp/values.yaml > /dev/null || { echo "❌ YAML malformato"; fail=1; }
-            echo "✅ values.yaml valido"
-          done
+          while IFS= read -r -d '' f; do
+            echo "════════════════════════════════════════"
+            echo "📦 $f"
+
+            chart=$(yq -r '.spec.chart.spec.chart // ""' "$f")
+            version=$(yq -r '.spec.chart.spec.version // ""' "$f")
+            source_name=$(yq -r '.spec.chart.spec.sourceRef.name // ""' "$f")
+
+            if [ -z "$chart" ] || [ -z "$source_name" ]; then
+              echo "⏭️  $f — missing chart or sourceRef, skipping"
+              continue
+            fi
+
+            # Find HelmRepository with matching name
+            repo_url=""
+            while IFS= read -r -d '' rf; do
+              rname=$(yq -r '.metadata.name' "$rf")
+              if [ "$rname" = "$source_name" ]; then
+                repo_url=$(yq -r '.spec.url' "$rf")
+                break
+              fi
+            done < <(find apps infrastructure -name 'helm-repository.yaml' -print0 2>/dev/null)
+
+            if [ -z "$repo_url" ]; then
+              echo "⏭️  $f — HelmRepository '$source_name' not found, skipping"
+              continue
+            fi
+
+            yq '.spec.values // {}' "$f" > /tmp/values.yaml
+
+            if [[ "$repo_url" == oci://* ]]; then
+              if helm template test "${repo_url}/${chart}" --version "$version" -f /tmp/values.yaml > /dev/null 2>/tmp/helm-err.txt; then
+                echo "✅ helm template OK"
+              else
+                echo "❌ helm template FAILED:"
+                cat /tmp/helm-err.txt | tail -20
+                fail=1
+              fi
+            else
+              if ! helm repo add tmp-repo "$repo_url" --force-update > /dev/null 2>&1; then
+                echo "❌ Cannot add repo $repo_url"
+                fail=1
+                continue
+              fi
+              if helm template test tmp-repo/"$chart" --version "$version" -f /tmp/values.yaml > /dev/null 2>/tmp/helm-err.txt; then
+                echo "✅ helm template OK"
+              else
+                echo "❌ helm template FAILED:"
+                cat /tmp/helm-err.txt | tail -20
+                fail=1
+              fi
+              helm repo remove tmp-repo > /dev/null 2>&1
+            fi
+          done < <(find apps infrastructure -name 'helm-release.yaml' -print0 2>/dev/null)
           exit $fail

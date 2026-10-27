@@ -1,11 +1,15 @@
 name: ci-dependency-review
+
 on:
   pull_request:
     paths:
-      - "renovate.json"
-      - "**/requirements*.txt"
-      - "**/package.json"
-      - ".github/workflows/ci-dependency-review.yaml"
+      - 'renovate.json'
+      - '**/requirements*.txt'
+      - '**/package.json'
+      - '**/go.mod'
+      - '**/Cargo.toml'
+      - '.github/workflows/**'
+      - '.github/dependabot.yml'
 
 permissions:
   contents: read

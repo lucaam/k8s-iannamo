@@ -1,12 +1,13 @@
 name: ci-actionlint
+
 on:
   pull_request:
     paths:
-      - ".github/workflows/**"
+      - '.github/workflows/**'
   push:
     branches: [main]
     paths:
-      - ".github/workflows/**"
+      - '.github/workflows/**'
 
 permissions:
   contents: read
