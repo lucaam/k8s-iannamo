@@ -53,10 +53,6 @@ spec:
       # -- pod dns policy
       dnsPolicy: ClusterFirst
       # -- CPU/Memory configuration for the pods
-      resources:
-        requests:
-          cpu: "10m"
-          memory: "128Mi"
       # -- Overrides the entrypoint of the container
       command: {}
       # -- Node taint tolerations for the pods

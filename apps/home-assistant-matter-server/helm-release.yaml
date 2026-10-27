@@ -53,11 +53,6 @@ spec:
           - ALL
       readOnlyRootFilesystem: false
 
-    resources:
-      requests:
-        cpu: "13m"
-        memory: "160Mi"
-
     livenessProbe:
       httpGet:
         path: /

@@ -30,11 +30,6 @@ spec:
 
     externalConfigMap: gatus
 
-    resources:
-      requests:
-        cpu: "10m"
-        memory: "32Mi"
-
     # OIDC values sono app-specific (restano nel secret gatus-secrets).
     # TELEGRAM è gestito da Flux postBuild.substituteFrom → viene iniettato
     # direttamente nel ConfigMap al momento dell'apply.

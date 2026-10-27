@@ -28,11 +28,6 @@ spec:
     envFrom: []
 
     # Resource sizing inferred from Prometheus metrics (p95/p99 + safety)
-    resources:
-      requests:
-        cpu: "250m"
-        memory: "2432Mi"
-
     hostPort:
       # Enable 'hostPort' or not
       enabled: false
@@ -339,10 +334,6 @@ spec:
           runAsGroup: 1000
           fsGroup: 1000
         # Resource settings for the code-server container (metrics-based suggestion)
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "224Mi"
         # Image settings for the code-server addon
         image:
           # Repository for the code-server image

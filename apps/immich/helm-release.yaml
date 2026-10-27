@@ -63,10 +63,6 @@ spec:
                     key: DB_DATABASE_NAME
               LOG_LEVEL: verbose
               TZ: Europe/Rome
-            resources:
-              requests:
-                cpu: "10m"
-                memory: "1280Mi"
     immich:
       metrics:
         # Enabling this will create the service monitors needed to monitor immich with the prometheus operator
@@ -136,11 +132,6 @@ spec:
                 pullPolicy: IfNotPresent
               securityContext:
                 privileged: true
-              resources:
-                requests:
-                  cpu: "250m"
-                  memory: "1280Mi"
-
     machine-learning:
       enabled: true
       controllers:
@@ -156,10 +147,6 @@ spec:
                 HF_XET_CACHE: /cache/huggingface-xet
                 MPLCONFIGDIR: /cache/matplotlib-config
                 MACHINE_LEARNING_MODEL_REVISION: v2
-              resources:
-                requests:
-                  cpu: "500m"
-                  memory: "2048Mi"
       persistence:
         cache:
           enabled: true
