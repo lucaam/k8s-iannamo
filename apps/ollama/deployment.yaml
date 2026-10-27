@@ -27,19 +27,14 @@ spec:
               value: "0.0.0.0:11434"
             - name: OLLAMA_NUM_GPU
               value: "0"
+            - name: OLLAMA_NO_CLOUD
+              value: "1"
           ports:
             - containerPort: 11434
               name: http
           volumeMounts:
             - name: models
               mountPath: /root/.ollama
-          resources:
-            requests:
-              memory: "2Gi"
-              cpu: "500m"
-            limits:
-              memory: "6Gi"
-              cpu: "4000m"
           readinessProbe:
             httpGet:
               path: /api/tags
