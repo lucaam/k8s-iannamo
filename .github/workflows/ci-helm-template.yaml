@@ -18,7 +18,7 @@ jobs:
       - name: Install helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.22.1
+          version: v4.3.1
       - name: Install yq
         run: |
           curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq
