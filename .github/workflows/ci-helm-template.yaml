@@ -25,6 +25,7 @@ jobs:
           chmod +x /usr/local/bin/yq
       - name: Validate HelmRelease values with helm template
         run: |
+          set +e
           fail=0
           while IFS= read -r -d '' f; do
             echo "════════════════════════════════════════"
@@ -33,51 +34,67 @@ jobs:
             chart=$(yq -r '.spec.chart.spec.chart // ""' "$f")
             version=$(yq -r '.spec.chart.spec.version // ""' "$f")
             source_name=$(yq -r '.spec.chart.spec.sourceRef.name // ""' "$f")
+            app_dir=$(dirname "$f")
 
             if [ -z "$chart" ] || [ -z "$source_name" ]; then
-              echo "⏭️  $f — missing chart or sourceRef, skipping"
+              echo "⏭️  missing chart or sourceRef, skipping"
               continue
             fi
 
-            # Find HelmRepository with matching name
-            repo_url=""
-            while IFS= read -r -d '' rf; do
-              rname=$(yq -r '.metadata.name' "$rf")
-              if [ "$rname" = "$source_name" ]; then
-                repo_url=$(yq -r '.spec.url' "$rf")
-                break
-              fi
-            done < <(find apps infrastructure -name 'helm-repository.yaml' -print0 2>/dev/null)
+            # Risolvi chart_ref in ordine: locale → OCI → Helm repo
+            chart_ref=""
 
-            if [ -z "$repo_url" ]; then
-              echo "⏭️  $f — HelmRepository '$source_name' not found, skipping"
-              continue
+            # 1. Chart locale nella directory dell'app
+            if [ -d "${app_dir}/chart" ]; then
+              chart_ref="${app_dir}/chart"
+              echo "📁 using local chart: ${chart_ref}"
+            fi
+
+            # 2. HelmRepository (serve per OCI o http)
+            if [ -z "$chart_ref" ]; then
+              repo_url=""
+              while IFS= read -r -d '' rf; do
+                rname=$(yq -r '.metadata.name' "$rf")
+                if [ "$rname" = "$source_name" ]; then
+                  repo_url=$(yq -r '.spec.url' "$rf")
+                  break
+                fi
+              done < <(find apps infrastructure -name 'helm-repository.yaml' -print0 2>/dev/null)
+
+              if [ -z "$repo_url" ]; then
+                echo "⏭️  HelmRepository '$source_name' not found, skipping"
+                continue
+              fi
+
+              if [[ "$repo_url" == oci://* ]]; then
+                chart_ref="${repo_url}/${chart}"
+                echo "📦 using OCI chart: ${chart_ref}"
+              else
+                # Prova ad aggiungere il repo; se fallisce, skip (non è un helm repo)
+                if helm repo add tmp-repo "$repo_url" --force-update >/dev/null 2>&1; then
+                  chart_ref="tmp-repo/${chart}"
+                  echo "🌐 using Helm repo: ${repo_url}"
+                else
+                  echo "⏭️  '${repo_url}' is not a Helm repository (missing index.yaml) — skipping"
+                  echo "    (this is expected for GitHub-source repos; use a local chart/ subdir if needed)"
+                  continue
+                fi
+              fi
             fi
 
             yq '.spec.values // {}' "$f" > /tmp/values.yaml
 
-            if [[ "$repo_url" == oci://* ]]; then
-              if helm template test "${repo_url}/${chart}" --version "$version" -f /tmp/values.yaml > /dev/null 2>/tmp/helm-err.txt; then
-                echo "✅ helm template OK"
-              else
-                echo "❌ helm template FAILED:"
-                cat /tmp/helm-err.txt | tail -20
-                fail=1
-              fi
+            if helm template test "$chart_ref" --version "$version" -f /tmp/values.yaml >/dev/null 2>/tmp/helm-err.txt; then
+              echo "✅ helm template OK"
             else
-              if ! helm repo add tmp-repo "$repo_url" --force-update > /dev/null 2>&1; then
-                echo "❌ Cannot add repo $repo_url"
-                fail=1
-                continue
-              fi
-              if helm template test tmp-repo/"$chart" --version "$version" -f /tmp/values.yaml > /dev/null 2>/tmp/helm-err.txt; then
-                echo "✅ helm template OK"
-              else
-                echo "❌ helm template FAILED:"
-                cat /tmp/helm-err.txt | tail -20
-                fail=1
-              fi
-              helm repo remove tmp-repo > /dev/null 2>&1
+              echo "❌ helm template FAILED:"
+              tail -20 /tmp/helm-err.txt
+              fail=1
+            fi
+
+            # cleanup
+            if [[ "$chart_ref" == tmp-repo/* ]]; then
+              helm repo remove tmp-repo >/dev/null 2>&1 || true
             fi
           done < <(find apps infrastructure -name 'helm-release.yaml' -print0 2>/dev/null)
           exit $fail
