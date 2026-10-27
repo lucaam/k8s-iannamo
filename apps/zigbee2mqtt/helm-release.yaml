@@ -59,7 +59,8 @@ spec:
       tolerations: {}
       # -- Select specific kube node, this will allow enforcing zigbee2mqtt running
       # only on the node with the USB adapter connected
-      nodeSelector: {}
+      nodeSelector:
+        kubernetes.io/hostname: talos-homelab-worker-2
       # -- Node affinity for the pods
       affinity: {}
       # -- Lifecycle configuration for the container
