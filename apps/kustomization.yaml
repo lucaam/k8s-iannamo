@@ -7,7 +7,7 @@ resources:
   - home-assistant
   - home-assistant-matter-server
   - immich
-  - tado-api-proxy
+  # - tado-api-proxy
   - gatus
   - prometheus
   - grafana
