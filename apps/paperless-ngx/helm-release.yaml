@@ -19,7 +19,7 @@ spec:
     # Forza l'immagine 3.3.0 (la 0.1.1 di default userebbe 2.20.5)
     image:
       repository: ghcr.io/paperless-ngx/paperless-ngx
-      tag: "3.3.0"
+      tag: "3.3.4"
 
     persistence:
       enabled: true
