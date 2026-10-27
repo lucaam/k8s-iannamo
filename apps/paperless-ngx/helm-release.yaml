@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: paperless-ngx
-      version: "0.1.1"                 # ← 0.1.1 (0.2.0 ha il bug dei label)
+      version: "0.1.1"
       sourceRef:
         kind: HelmRepository
         name: paperless-ngx
@@ -16,7 +16,7 @@ spec:
   interval: 1h
   targetNamespace: paperless-ngx
   values:
-    # Forza l'immagine 3.3.0 (la 0.1.1 di default userebbe 2.20.5)
+    # Forza l'immagine 3.3.4 (la chart 0.1.1 userebbe 2.20.5)
     image:
       repository: ghcr.io/paperless-ngx/paperless-ngx
       tag: "3.3.4"
@@ -24,6 +24,29 @@ spec:
     persistence:
       enabled: true
       storageClass: nfs-flash
+
+    extraEnv:
+      - name: PAPERLESS_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: paperless-secret
+            key: secret-key
+      - name: PAPERLESS_DBENGINE
+        value: "postgresql"
+      - name: PAPERLESS_AI_ENABLED
+        value: "true"
+      - name: PAPERLESS_AI_LLM_BACKEND
+        value: "ollama"
+      - name: PAPERLESS_AI_LLM_MODEL
+        value: "llama3.2:3b"
+      - name: PAPERLESS_AI_LLM_ENDPOINT
+        value: "http://ollama.ollama.svc.cluster.local:11434"
+      - name: PAPERLESS_AI_LLM_EMBEDDING_BACKEND
+        value: "ollama"
+      - name: PAPERLESS_AI_LLM_EMBEDDING_MODEL
+        value: "bge-m3"
+      - name: PAPERLESS_AI_LLM_REQUEST_TIMEOUT
+        value: "300"
 
     app:
       url: "https://paperless.${DOMAIN}"
@@ -47,35 +70,6 @@ spec:
         clientSecretKey: "client-secret"
         disableRegularLogin: false
         redirectLoginToSSO: false
-
-      extraEnv:
-        - name: PAPERLESS_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: paperless-secret
-              key: secret-key
-
-        # --- Migrazione 3.x: DB engine obbligatorio ---
-        - name: PAPERLESS_DBENGINE
-          value: "postgresql"
-
-        # --- AI nativa (Paperless 3.x) ---
-        - name: PAPERLESS_AI_ENABLED
-          value: "true"
-        - name: PAPERLESS_AI_LLM_BACKEND
-          value: "ollama"
-        - name: PAPERLESS_AI_LLM_MODEL
-          value: "llama3.2:3b"
-        - name: PAPERLESS_AI_LLM_ENDPOINT
-          value: "http://ollama.ollama.svc.cluster.local:11434"
-        # Embeddings via Ollama (per l'indice dei documenti simili)
-        - name: PAPERLESS_AI_LLM_EMBEDDING_BACKEND
-          value: "ollama"
-        - name: PAPERLESS_AI_LLM_EMBEDDING_MODEL
-          value: "bge-m3"                 # multilingua; in alternativa "embeddinggemma"
-        # Timeout alto: su CPU le risposte possono richiedere >120s
-        - name: PAPERLESS_AI_LLM_REQUEST_TIMEOUT
-          value: "300"
 
     route:
       enabled: false
