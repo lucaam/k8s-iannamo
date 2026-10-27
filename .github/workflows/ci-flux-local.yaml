@@ -1,0 +1,39 @@
+name: ci-flux-local
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "infrastructure/**"
+      - ".github/workflows/ci-flux-local.yaml"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install flux-local
+      - name: flux-local test
+        run: flux-local test --path ./apps --all-namespaces --enable-helm
+      - name: flux-local diff
+        if: github.event_name == 'pull_request'
+        run: |
+          flux-local diff --path ./apps --all-namespaces --enable-helm > /tmp/flux-diff.txt || true
+          cat /tmp/flux-diff.txt
+          echo "lines=$(wc -l < /tmp/flux-diff.txt)" >> $GITHUB_OUTPUT
+        id: diff
+      - name: Comment diff on PR
+        if: github.event_name == 'pull_request' && steps.diff.outputs.lines != '0'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: flux-local-diff
+          path: /tmp/flux-diff.txt

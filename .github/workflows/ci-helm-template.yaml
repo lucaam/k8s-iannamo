@@ -1,0 +1,30 @@
+name: ci-helm-template
+on:
+  pull_request:
+    paths:
+      - "apps/*/helm-release.yaml"
+      - "infrastructure/*/helm-release.yaml"
+      - ".github/workflows/ci-helm-template.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  template:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+      - name: Validate values YAML
+        run: |
+          fail=0
+          for f in $(find apps infrastructure -name "helm-release.yaml" 2>/dev/null); do
+            echo "--- $f ---"
+            yq ".spec.values" "$f" > /tmp/values.yaml
+            yq -e "." /tmp/values.yaml > /dev/null || { echo "❌ YAML malformato"; fail=1; }
+            echo "✅ values.yaml valido"
+          done
+          exit $fail
