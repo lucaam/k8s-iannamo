@@ -2,3 +2,10 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: ollama
+  labels:
+    # IPEX-LLM richiede hostPath /dev/dri e privilegi elevati:
+    # baseline consente hostPath e allowPrivilegeEscalation,
+    # restricted li vieta (motivo dell'errore corrente).
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline
