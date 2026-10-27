@@ -57,7 +57,7 @@
       "groupName": "helm {{depName}}",
       "automerge": true,
       "automergeType": "pr",
-      "stabilityDays": 3,
+      "minimumReleaseAge": "3 days",
       "labels": ["automerge", "helm"]
     },
     {
@@ -73,7 +73,7 @@
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
       "automergeType": "pr",
-      "stabilityDays": 3,
+      "minimumReleaseAge": "3 days",
       "labels": ["automerge", "docker"]
     },
     {
@@ -133,7 +133,7 @@
       "matchPackageNames": ["ollama/ollama"],
       "matchUpdateTypes": ["patch"],
       "automerge": true,
-      "stabilityDays": 3,
+      "minimumReleaseAge": "3 days",
       "labels": ["automerge", "docker"]
     },
     {
@@ -142,7 +142,7 @@
       "matchPackageNames": ["open-webui"],
       "matchUpdateTypes": ["patch"],
       "automerge": true,
-      "stabilityDays": 3,
+      "minimumReleaseAge": "3 days",
       "labels": ["automerge", "helm"]
     },
     {
