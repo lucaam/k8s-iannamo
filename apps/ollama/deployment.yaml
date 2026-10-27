@@ -17,6 +17,24 @@ spec:
       labels:
         app: ollama
     spec:
+      # Pull dichiarativo dei modelli: idempotente, no-op se già presenti nel PVC
+      initContainers:
+        - name: pull-models
+          image: ollama/ollama:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "▶ Pulling models (idempotent: skip if already present)..."
+              ollama pull llama3.2:3b
+              ollama pull bge-m3
+              echo "✅ Models ready"
+          volumeMounts:
+            - name: models
+              mountPath: /root/.ollama
+
       containers:
         - name: ollama
           image: ollama/ollama:latest
@@ -47,6 +65,7 @@ spec:
               port: 11434
             initialDelaySeconds: 60
             periodSeconds: 30
+
       volumes:
         - name: models
           persistentVolumeClaim:
