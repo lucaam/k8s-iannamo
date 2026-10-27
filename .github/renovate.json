@@ -21,34 +21,6 @@
     ]
   },
 
-  "customManagers": [
-    {
-      "customType": "regex",
-      "description": "Docker images with repository + tag on separate lines in HelmRelease values",
-      "managerFilePatterns": [
-        "/(^|/)apps/.*helm-release\\.ya?ml$/",
-        "/(^|/)infrastructure/.*helm-release\\.ya?ml$/"
-      ],
-      "matchStrings": [
-        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,3}?\\s*tag:\\s*['\"]?(?<currentValue>[^'\"\\s@]+)"
-      ],
-      "datasourceTemplate": "docker",
-      "packageNameTemplate": "{{{depName}}}"
-    },
-    {
-      "customType": "regex",
-      "description": "Docker images in Helm chart values.yaml files (charts/*/values.yaml)",
-      "managerFilePatterns": [
-        "/(^|/).*charts/.*/values\\.ya?ml$/"
-      ],
-      "matchStrings": [
-        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*tag:\\s*['\"]?(?<currentValue>v?[^'\"\\s@]+)"
-      ],
-      "datasourceTemplate": "docker",
-      "packageNameTemplate": "{{{depName}}}"
-    }
-  ],
-
   "packageRules": [
     {
       "description": "Global: group minor+patch Helm updates per chart, automerge after 3 days",
@@ -84,7 +56,7 @@
       "labels": ["needs-review", "docker"]
     },
     {
-      "description": "Critical infrastructure: always manual review (Authentik, CNPG, Flux, Traefik)",
+      "description": "Critical infrastructure: always manual review",
       "matchPackageNames": [
         "authentik",
         "ghcr.io/goauthentik/server",
@@ -100,7 +72,7 @@
       "labels": ["needs-review", "critical"]
     },
     {
-      "description": "Stateful apps with migrations: always manual review (Paperless, Immich)",
+      "description": "Stateful apps with migrations: always manual review",
       "matchPackageNames": [
         "paperless-ngx",
         "ghcr.io/paperless-ngx/paperless-ngx",
@@ -112,7 +84,7 @@
       "labels": ["needs-review", "stateful"]
     },
     {
-      "description": "TeslaMate: chart bundles Grafana, CNPG, Mosquitto - manual review for minor+",
+      "description": "TeslaMate: manual review for minor+",
       "matchDatasources": ["helm"],
       "matchPackageNames": ["teslamate"],
       "matchUpdateTypes": ["minor", "major"],
@@ -120,7 +92,7 @@
       "labels": ["needs-review", "helm"]
     },
     {
-      "description": "TeslaMate images: manual review for minor+ (Grafana fork pinned)",
+      "description": "TeslaMate images: manual review for minor+",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["teslamate/teslamate", "teslamate/grafana"],
       "matchUpdateTypes": ["minor", "major"],
@@ -128,7 +100,7 @@
       "labels": ["needs-review", "docker"]
     },
     {
-      "description": "Ollama: patch automerge, minor manual (model compatibility)",
+      "description": "Ollama: patch automerge, minor manual",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ollama/ollama"],
       "matchUpdateTypes": ["patch"],
@@ -137,7 +109,7 @@
       "labels": ["automerge", "docker"]
     },
     {
-      "description": "Open WebUI: patch automerge, minor manual (SSO/API breaking changes)",
+      "description": "Open WebUI: patch automerge, minor manual",
       "matchDatasources": ["helm"],
       "matchPackageNames": ["open-webui"],
       "matchUpdateTypes": ["patch"],

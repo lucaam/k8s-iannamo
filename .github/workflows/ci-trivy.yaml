@@ -1,0 +1,39 @@
+name: ci-trivy
+
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'infrastructure/**'
+      - '.github/workflows/ci-trivy.yaml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: '.'
+          skip-dirs: '.git,.github,node_modules,.backup-*'
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: '0'
+      - name: Verify SARIF file
+        run: ls -la trivy-results.sarif
+      - name: Upload SARIF
+        if: success()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-config

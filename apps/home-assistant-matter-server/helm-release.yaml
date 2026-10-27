@@ -13,15 +13,50 @@ spec:
         kind: HelmRepository
         name: wittdennis
         namespace: flux-system
+
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Service
+              name: home-assistant-matter-server
+            patch: |
+              - op: add
+                path: /metadata/annotations
+                value:
+                  metallb.io/address-pool: external-pool
+                  metallb.io/loadBalancerIPs: 192.168.178.14
+          - target:
+              kind: Deployment
+              name: home-assistant-matter-server
+            patch: |
+              - op: add
+                path: /spec/template/spec/containers/0/securityContext
+                value:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                      - ALL
+                  readOnlyRootFilesystem: false
+          - target:
+              kind: Deployment
+              name: home-assistant-matter-server
+            patch: |
+              - op: add
+                path: /spec/template/spec/securityContext
+                value:
+                  fsGroup: 1000
+                  runAsNonRoot: false
+                  runAsUser: 0
+
   values:
     image:
-      repository: matter-js/matterjs-server   # il chart antepone già ghcr.io
+      repository: matter-js/matterjs-server
       pullPolicy: IfNotPresent
       tag: "1.4.0"
 
     log:
       logLevel: info
-      logLevelSDK: progress
 
     bluetoothCommissioning:
       enabled: false
@@ -29,29 +64,13 @@ spec:
     service:
       type: LoadBalancer
       port: 5580
-      annotations:
-        metallb.io/address-pool: external-pool
-        metallb.io/loadBalancerIPs: 192.168.178.14
 
-    # Matter richiede mDNS/multicast sulla LAN
-    hostNetwork: true
-    hostPort: true
+    port: 5580
+    networkInterface: eth0
 
     persistence:
       storageClassName: nfs-spacex
       size: 2Gi
-
-    podSecurityContext:
-      fsGroup: 1000
-      runAsNonRoot: false
-      runAsUser: 0
-
-    securityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-      readOnlyRootFilesystem: false
 
     livenessProbe:
       httpGet:

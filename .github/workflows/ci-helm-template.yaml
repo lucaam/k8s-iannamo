@@ -1,0 +1,100 @@
+name: ci-helm-template
+
+on:
+  pull_request:
+    paths:
+      - 'apps/*/helm-release.yaml'
+      - 'infrastructure/*/helm-release.yaml'
+      - '.github/workflows/ci-helm-template.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+      - name: Install yq
+        run: |
+          curl -sL https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -o /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+      - name: Validate HelmRelease values with helm template
+        run: |
+          set +e
+          fail=0
+          while IFS= read -r -d '' f; do
+            echo "════════════════════════════════════════"
+            echo "📦 $f"
+
+            chart=$(yq -r '.spec.chart.spec.chart // ""' "$f")
+            version=$(yq -r '.spec.chart.spec.version // ""' "$f")
+            source_name=$(yq -r '.spec.chart.spec.sourceRef.name // ""' "$f")
+            app_dir=$(dirname "$f")
+
+            if [ -z "$chart" ] || [ -z "$source_name" ]; then
+              echo "⏭️  missing chart or sourceRef, skipping"
+              continue
+            fi
+
+            # Risolvi chart_ref in ordine: locale → OCI → Helm repo
+            chart_ref=""
+
+            # 1. Chart locale nella directory dell'app
+            if [ -d "${app_dir}/chart" ]; then
+              chart_ref="${app_dir}/chart"
+              echo "📁 using local chart: ${chart_ref}"
+            fi
+
+            # 2. HelmRepository (serve per OCI o http)
+            if [ -z "$chart_ref" ]; then
+              repo_url=""
+              while IFS= read -r -d '' rf; do
+                rname=$(yq -r '.metadata.name' "$rf")
+                if [ "$rname" = "$source_name" ]; then
+                  repo_url=$(yq -r '.spec.url' "$rf")
+                  break
+                fi
+              done < <(find apps infrastructure -name 'helm-repository.yaml' -print0 2>/dev/null)
+
+              if [ -z "$repo_url" ]; then
+                echo "⏭️  HelmRepository '$source_name' not found, skipping"
+                continue
+              fi
+
+              if [[ "$repo_url" == oci://* ]]; then
+                chart_ref="${repo_url}/${chart}"
+                echo "📦 using OCI chart: ${chart_ref}"
+              else
+                # Prova ad aggiungere il repo; se fallisce, skip (non è un helm repo)
+                if helm repo add tmp-repo "$repo_url" --force-update >/dev/null 2>&1; then
+                  chart_ref="tmp-repo/${chart}"
+                  echo "🌐 using Helm repo: ${repo_url}"
+                else
+                  echo "⏭️  '${repo_url}' is not a Helm repository (missing index.yaml) — skipping"
+                  echo "    (this is expected for GitHub-source repos; use a local chart/ subdir if needed)"
+                  continue
+                fi
+              fi
+            fi
+
+            yq '.spec.values // {}' "$f" > /tmp/values.yaml
+
+            if helm template test "$chart_ref" --version "$version" -f /tmp/values.yaml >/dev/null 2>/tmp/helm-err.txt; then
+              echo "✅ helm template OK"
+            else
+              echo "❌ helm template FAILED:"
+              tail -20 /tmp/helm-err.txt
+              fail=1
+            fi
+
+            # cleanup
+            if [[ "$chart_ref" == tmp-repo/* ]]; then
+              helm repo remove tmp-repo >/dev/null 2>&1 || true
+            fi
+          done < <(find apps infrastructure -name 'helm-release.yaml' -print0 2>/dev/null)
+          exit $fail

@@ -8,29 +8,29 @@ spec:
   chart:
     spec:
       chart: traefik
-      version: 42.1.3                         # ← aggiornato
+      version: 42.1.3
       sourceRef:
         kind: HelmRepository
         name: traefik
         namespace: flux-system
   upgrade:
-    crds: Skip                                 # opzionale: valuta se gestire le CRD separatamente
+    crds: Skip
     remediation:
       retries: 3
   install:
     crds: Skip
   values:
-
-    # --- LOGGING (modificato) ---
-    log:                                       # prima era logs.general
+    # --- LOGGING ---
+    log:
       level: WARN
 
-    accessLog:                                 # prima era access
+    accessLog:
       enabled: true
 
     # --- CRD ---
-    crds:
-      enabled: false
+    # `crds` rimosso: non esiste più come valore della chart v34+.
+    # I CRD sono gestiti da `upgrade.crds: Skip` / `install.crds: Skip` (sopra)
+    # oppure dalla chart separata `traefik-crds` se vuoi installarli esplicitamente.
 
     # --- DEPLOYMENT ---
     deployment:
@@ -51,22 +51,24 @@ spec:
       web:
         port: 8000
         exposedPort: 80
-        redirections:
-          entryPoint:
-            to: websecure
-            scheme: https
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
       websecure:
         port: 8443
         exposedPort: 443
-        tls:
-          enabled: true
+        http:
+          tls:
+            enabled: true
+          middlewares:
+            - traefik-traefik-errors@kubernetescrd
         transport:
           respondingTimeouts:
             readTimeout: 600s
             idleTimeout: 600s
             writeTimeout: 600s
-        middlewares:
-          - traefik-traefik-errors@kubernetescrd
 
     # --- INGRESS ROUTE DASHBOARD ---
     ingressRoute:
@@ -75,8 +77,8 @@ spec:
         matchRule: Host(`traefik.${DOMAIN}`)
         entryPoints: ["websecure"]
         middlewares:
-          - name: authentik-forward-auth
-          - name: traefik-errors
+          - authentik-forward-auth@kubernetescrd
+          - traefik-errors@kubernetescrd
 
     # --- GATEWAY ---
     gateway:

@@ -1,0 +1,75 @@
+name: ci-flate
+
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'infrastructure/**'
+      - '.github/workflows/ci-flate.yaml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: head
+
+      - name: Checkout PR base (merge-base)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - name: Install flate
+        uses: home-operations/flate/action@main
+        with:
+          # token opzionale: di default usa ${{ github.token }}
+          # necessario solo per evitare rate-limit su repo molto attivi
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: flate build (render validation)
+        working-directory: head
+        run: |
+          # `build all` renderizza Kustomization + HelmRelease.
+          # Non serve --enable-helm: flate ha Helm linkato nativamente.
+          flate build all --path ./apps > /tmp/flate-build.yaml
+          echo "✅ flate build OK ($(wc -l < /tmp/flate-build.yaml) lines rendered)"
+
+      - name: flate test (resource-level PASS/FAIL)
+        working-directory: head
+        run: |
+          # `test all` esegue la pipeline di reconcile offline e riporta
+          # PASS/FAIL per ogni risorsa. Exit non-zero su qualsiasi FAIL.
+          flate test all --path ./apps
+
+      - name: flate diff (rendered diff vs base)
+        if: github.event_name == 'pull_request'
+        working-directory: head
+        run: |
+          # `--path-orig ../base/apps` attiva la modalità changed-only:
+          # flate renderizza base e head e produce un diff path-keyed.
+          # `-o github` formatta l'output per i commenti GitHub.
+          flate diff all \
+            --path ./apps \
+            --path-orig ../base/apps \
+            -o github > /tmp/flate-diff.txt || true
+
+          echo "diff_lines=$(wc -l < /tmp/flate-diff.txt)" >> "$GITHUB_OUTPUT"
+        id: diff
+
+      - name: Comment rendered diff on PR
+        if: github.event_name == 'pull_request' && steps.diff.outputs.diff_lines != '0'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: flate-rendered-diff
+          path: /tmp/flate-diff.txt

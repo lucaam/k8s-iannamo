@@ -1,0 +1,47 @@
+name: ci-conftest
+
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'infrastructure/**'
+      - 'policy/**'
+      - '.github/workflows/ci-conftest.yaml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kustomize
+        run: |
+          curl -sL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.5.0/kustomize_v5.5.0_linux_amd64.tar.gz" | tar xz
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+      - name: Install conftest
+        run: |
+          curl -sL https://github.com/open-policy-agent/conftest/releases/download/v0.56.0/conftest_0.56.0_Linux_x86_64.tar.gz | tar xz
+          sudo mv conftest /usr/local/bin/
+          conftest --version
+      - name: Render manifests (apps + infrastructure)
+        run: |
+          mkdir -p /tmp/rendered
+          kustomize build apps/ > /tmp/rendered/apps.yaml
+          if [ -d infrastructure ] && [ -f infrastructure/kustomization.yaml ]; then
+            kustomize build infrastructure/ > /tmp/rendered/infrastructure.yaml
+          else
+            echo "" > /tmp/rendered/infrastructure.yaml
+          fi
+          cat /tmp/rendered/apps.yaml /tmp/rendered/infrastructure.yaml > /tmp/rendered.yaml
+      - name: Test policies (warnings only)
+        run: |
+          conftest test /tmp/rendered.yaml \
+            --policy policy/ \
+            --all-namespaces \
+            --fail-on-warn=false \
+            --output standard
