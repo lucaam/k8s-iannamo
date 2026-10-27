@@ -1,0 +1,13 @@
+extends: default
+ignore: |
+  .backup-*/
+  charts/
+rules:
+  line-length:
+    max: 200
+    level: warning
+  comments-indentation: disable
+  document-start: disable
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
