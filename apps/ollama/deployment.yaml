@@ -17,7 +17,6 @@ spec:
       labels:
         app: ollama
     spec:
-      # Pull dichiarativo dei modelli: idempotente, no-op se già presenti nel PVC
       initContainers:
         - name: pull-models
           image: ollama/ollama:latest
@@ -27,10 +26,27 @@ spec:
             - -c
             - |
               set -e
-              echo "▶ Pulling models (idempotent: skip if already present)..."
+              echo "▶ Starting temporary ollama server for pull..."
+              OLLAMA_HOST=127.0.0.1:11434 ollama serve &
+              SERVER_PID=$!
+
+              echo "▶ Waiting for server to be ready..."
+              for i in $(seq 1 60); do
+                if ollama list >/dev/null 2>&1; then
+                  echo "✅ Server ready after ${i}s"
+                  break
+                fi
+                sleep 1
+              done
+
+              echo "▶ Pulling llama3.2:3b..."
               ollama pull llama3.2:3b
+
+              echo "▶ Pulling bge-m3..."
               ollama pull bge-m3
+
               echo "✅ Models ready"
+              kill $SERVER_PID 2>/dev/null || true
           volumeMounts:
             - name: models
               mountPath: /root/.ollama
