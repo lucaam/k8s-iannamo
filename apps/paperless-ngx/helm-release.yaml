@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: paperless-ngx
-      version: "0.1.1"                 # ← 0.1.1 (0.2.0 ha il bug dei label)
+      version: "0.2.0"                 # ← 0.1.1 (0.2.0 ha il bug dei label)
       sourceRef:
         kind: HelmRepository
         name: paperless-ngx
