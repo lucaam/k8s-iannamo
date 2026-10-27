@@ -27,8 +27,14 @@ spec:
       storageClass: nfs-flash
       size: 5Gi
 
+    # Usa Ollama esterno (namespace 'ollama'), niente duplicati
+    ollama:
+      enabled: false
+    pipelines:
+      enabled: false
+
     extraEnvVars:
-      # --- Backend Ollama ---
+      # --- Backend Ollama esterno ---
       - name: OLLAMA_BASE_URL
         value: "http://ollama.ollama.svc.cluster.local:11434"
 
