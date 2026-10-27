@@ -1,0 +1,66 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: open-webui
+  namespace: open-webui
+spec:
+  releaseName: open-webui
+  chart:
+    spec:
+      chart: open-webui
+      sourceRef:
+        kind: HelmRepository
+        name: open-webui
+        namespace: flux-system
+  interval: 1h
+  targetNamespace: open-webui
+  values:
+    ingress:
+      enabled: false        # routing via HTTPRoute
+
+    service:
+      type: ClusterIP
+      port: 8080
+
+    persistence:
+      enabled: true
+      storageClass: nfs-flash
+      size: 5Gi
+
+    extraEnvVars:
+      # --- Backend Ollama ---
+      - name: OLLAMA_BASE_URL
+        value: "http://ollama.ollama.svc.cluster.local:11434"
+
+      # --- Session key (persistente) ---
+      - name: WEBUI_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: open-webui-oidc-secret
+            key: webui-secret-key
+
+      # --- Disabilita registrazione locale + form di login ---
+      - name: ENABLE_SIGNUP
+        value: "false"
+      - name: ENABLE_LOGIN_FORM
+        value: "false"
+
+      # --- OIDC (Authentik) ---
+      - name: ENABLE_OAUTH_SIGNUP
+        value: "true"
+      - name: OAUTH_PROVIDER_NAME
+        value: "Authentik"
+      - name: OPENID_PROVIDER_URL
+        value: "https://auth.${DOMAIN}/application/o/open-webui/.well-known/openid-configuration"
+      - name: OAUTH_SCOPES
+        value: "openid email profile"
+      - name: OAUTH_CLIENT_ID
+        valueFrom:
+          secretKeyRef:
+            name: open-webui-oidc-secret
+            key: client-id
+      - name: OAUTH_CLIENT_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: open-webui-oidc-secret
+            key: client-secret
