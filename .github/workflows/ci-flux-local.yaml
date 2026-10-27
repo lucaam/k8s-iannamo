@@ -27,9 +27,9 @@ jobs:
         run: pip install flux-local
       - name: flux-local build (validation)
         run: |
-          # `flux-local build` valida che il Kustomization root renderizzi
-          # senza errori. Sostituisce `flux-local test` che richiede test pytest.
-          flux-local build --path ./apps --all-namespaces --enable-helm > /tmp/flux-build.txt
+          # `build all` valida che tutte le Kustomization + HelmRelease
+          # renderizzino senza errori. Il sottocomando è obbligatorio.
+          flux-local build all --path ./apps --all-namespaces --enable-helm > /tmp/flux-build.txt
           echo "✅ flux-local build OK ($(wc -l < /tmp/flux-build.txt) lines rendered)"
       - name: flux-local diff (Kustomizations)
         if: github.event_name == 'pull_request'
