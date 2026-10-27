@@ -7,6 +7,9 @@ metadata:
     app: ollama-intel
 spec:
   replicas: 1
+  # Recreate evita due pod simultanei che si contendono /dev/dri
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: ollama-intel
@@ -18,23 +21,23 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: talos-homelab-worker-1
 
+      # Init: scarica il modello nel PVC (idempotente: se esiste, non riscarica)
       initContainers:
         - name: provision-model
           image: intelanalytics/ipex-llm-inference-cpp-xpu:2.2.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
           command:
             - bash
             - -c
             - |
-              set -e
-              cd /llm/scripts/
-              source ipex-llm-init --gpu --device iGPU
-              bash start-ollama.sh
-              for i in $(seq 1 30); do
-                ollama list >/dev/null 2>&1 && break
-                sleep 2
-              done
+              set -ex
+              # Il binario ollama NON è nel PATH di default in questa immagine
+              export PATH="/usr/local/lib/python3.11/dist-packages/bigdl/cpp/libs:$PATH"
+              source ipex-llm-init --gpu --device iGPU || true
+              export PATH="/usr/local/lib/python3.11/dist-packages/bigdl/cpp/libs:$PATH"
+              # ollama pull funziona standalone (non serve serve attivo)
+              # Idempotente: se il modello esiste già nel PVC, esce in pochi secondi
               ollama pull llama3.2:3b
-              echo "✅ Modello llama3.2:3b scaricato."
           env:
             - name: OLLAMA_INTEL_GPU
               value: "true"
@@ -43,8 +46,6 @@ spec:
             - name: DEVICE
               value: "iGPU"
           volumeMounts:
-            - name: dev-dri
-              mountPath: /dev/dri
             - name: models
               mountPath: /root/.ollama
 
@@ -56,15 +57,12 @@ spec:
             - bash
             - -c
             - |
-              cd /llm/scripts/
+              set -ex
+              export PATH="/usr/local/lib/python3.11/dist-packages/bigdl/cpp/libs:$PATH"
               source ipex-llm-init --gpu --device iGPU
-              bash start-ollama.sh
-              tail -f /llm/ollama/ollama.log
-          volumeMounts:
-            - name: dev-dri
-              mountPath: /dev/dri
-            - name: models
-              mountPath: /root/.ollama
+              export PATH="/usr/local/lib/python3.11/dist-packages/bigdl/cpp/libs:$PATH"
+              # exec: ollama diventa PID 1, riceve SIGTERM correttamente
+              exec ollama serve
           env:
             - name: OLLAMA_INTEL_GPU
               value: "true"
@@ -77,6 +75,26 @@ spec:
           ports:
             - containerPort: 11434
               name: http
+          volumeMounts:
+            - name: dev-dri
+              mountPath: /dev/dri
+            - name: models
+              mountPath: /root/.ollama
+          livenessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 3
+
       volumes:
         - name: dev-dri
           hostPath:
