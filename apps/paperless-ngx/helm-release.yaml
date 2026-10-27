@@ -31,8 +31,6 @@ spec:
           secretKeyRef:
             name: paperless-secret
             key: secret-key
-      - name: PAPERLESS_DBENGINE
-        value: "postgresql"
       - name: PAPERLESS_AI_ENABLED
         value: "true"
       - name: PAPERLESS_AI_LLM_BACKEND
