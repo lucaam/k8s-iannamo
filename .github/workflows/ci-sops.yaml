@@ -16,7 +16,7 @@ jobs:
   check-encrypted:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Verify all *.sops.yaml/*.sops.yml are encrypted
         run: |
           fail=0
@@ -44,7 +44,7 @@ jobs:
     env:
       SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Skip if no key
         if: env.SOPS_AGE_KEY == ''
         run: echo "⚠️ SOPS_AGE_KEY not set — skipping decrypt test"
