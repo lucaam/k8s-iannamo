@@ -16,3 +16,4 @@ resources:
   - social-media-reuploader
   - paperless-ngx
   - teslamate
+  - ollama

@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-intel
+  namespace: ollama
+  labels:
+    app: ollama-intel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama-intel
+  template:
+    metadata:
+      labels:
+        app: ollama-intel
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: talos-homelab-worker-1
+
+      initContainers:
+        - name: provision-model
+          image: intelanalytics/ipex-llm-inference-cpp-xpu:2.2.0-SNAPSHOT
+          command:
+            - bash
+            - -c
+            - |
+              set -e
+              cd /llm/scripts/
+              source ipex-llm-init --gpu --device iGPU
+              bash start-ollama.sh
+              for i in $(seq 1 30); do
+                ollama list >/dev/null 2>&1 && break
+                sleep 2
+              done
+              ollama pull llama3.2:3b
+              echo "✅ Modello llama3.2:3b scaricato."
+          env:
+            - name: OLLAMA_INTEL_GPU
+              value: "true"
+            - name: ONEAPI_DEVICE_SELECTOR
+              value: "level_zero:0"
+            - name: DEVICE
+              value: "iGPU"
+          volumeMounts:
+            - name: dev-dri
+              mountPath: /dev/dri
+            - name: models
+              mountPath: /root/.ollama
+
+      containers:
+        - name: ollama
+          image: intelanalytics/ipex-llm-inference-cpp-xpu:2.2.0-SNAPSHOT
+          imagePullPolicy: IfNotPresent
+          command:
+            - bash
+            - -c
+            - |
+              cd /llm/scripts/
+              source ipex-llm-init --gpu --device iGPU
+              bash start-ollama.sh
+              tail -f /llm/ollama/ollama.log
+          volumeMounts:
+            - name: dev-dri
+              mountPath: /dev/dri
+            - name: models
+              mountPath: /root/.ollama
+          env:
+            - name: OLLAMA_INTEL_GPU
+              value: "true"
+            - name: ONEAPI_DEVICE_SELECTOR
+              value: "level_zero:0"
+            - name: OLLAMA_HOST
+              value: "0.0.0.0:11434"
+            - name: DEVICE
+              value: "iGPU"
+          ports:
+            - containerPort: 11434
+              name: http
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "1000m"
+            limits:
+              memory: "8Gi"
+              cpu: "4000m"
+
+      volumes:
+        - name: dev-dri
+          hostPath:
+            path: /dev/dri
+            type: Directory
+        - name: models
+          persistentVolumeClaim:
+            claimName: ollama-models

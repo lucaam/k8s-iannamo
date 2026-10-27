@@ -16,6 +16,17 @@ spec:
   interval: 1h
   targetNamespace: paperless-ngx
   values:
+    paperlessAi:
+      enabled: true
+      env:
+        - name: AI_PROVIDER
+          value: "ollama"
+        - name: OLLAMA_API_URL
+          value: "http://ollama.ollama.svc.cluster.local:11434"
+        - name: OLLAMA_MODEL
+          value: "llama3.2:3b"
+        - name: AI_REQUEST_TIMEOUT
+          value: "300"
     # Persistenza dati Paperless-ngx (PVC `paperless-ngx`)
     persistence:
       enabled: true
@@ -47,11 +58,25 @@ spec:
         redirectLoginToSSO: false
 
     extraEnv:
-      - name: PAPERLESS_SECRET_KEY
-        valueFrom:
-          secretKeyRef:
-            name: paperless-secret
-            key: secret-key
+
+        # --- AI / Ollama ---
+        - name: PAPERLESS_AI_ENABLED
+          value: "true"
+        - name: PAPERLESS_AI_LLM_BACKEND
+          value: "ollama"
+        # NOTA: la variabile corretta è ENDPOINT, non URL (vedi documentazione)
+        - name: PAPERLESS_AI_LLM_ENDPOINT
+          value: "http://ollama.ollama.svc.cluster.local:11434"
+        - name: PAPERLESS_AI_LLM_MODEL
+          value: "llama3.2:3b"
+        # Aumenta il timeout per elaborazioni lente su CPU (opzionale)
+        - name: PAPERLESS_AI_LLM_TIMEOUT
+          value: "300"
+        - name: PAPERLESS_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: paperless-secret
+              key: secret-key
 
     # Routing gestito via HTTPRoute separato (pattern k8s-iannamo)
     route:
