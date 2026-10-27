@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: paperless-ngx
-      version: "0.2.0"
+      version: "0.1.1"                 # ← 0.1.1 (0.2.0 ha il bug dei label)
       sourceRef:
         kind: HelmRepository
         name: paperless-ngx
@@ -16,18 +16,11 @@ spec:
   interval: 1h
   targetNamespace: paperless-ngx
   values:
-    paperlessAi:
-      enabled: true
-      env:
-        - name: AI_PROVIDER
-          value: "ollama"
-        - name: OLLAMA_API_URL
-          value: "http://ollama.ollama.svc.cluster.local:11434"
-        - name: OLLAMA_MODEL
-          value: "llama3.2:3b"
-        - name: AI_REQUEST_TIMEOUT
-          value: "300"
-    # Persistenza dati Paperless-ngx (PVC `paperless-ngx`)
+    # Forza l'immagine 3.3.0 (la 0.1.1 di default userebbe 2.20.5)
+    image:
+      repository: ghcr.io/paperless-ngx/paperless-ngx
+      tag: "3.3.0"
+
     persistence:
       enabled: true
       storageClass: nfs-flash
@@ -48,8 +41,6 @@ spec:
         enabled: true
         providerId: "authentik"
         displayName: "Authentik SSO"
-        # Format richiesto da Paperless: base URL dell'app OIDC in Authentik,
-        # con slug e slash finale (NON solo l'origine, NON il discovery URL completo)
         serverUrl: "https://auth.${DOMAIN}/application/o/paperless/"
         existingSecret: "paperless-oidc-secret"
         clientIdKey: "client-id"
@@ -57,28 +48,35 @@ spec:
         disableRegularLogin: false
         redirectLoginToSSO: false
 
-    extraEnv:
-
-        # --- AI / Ollama ---
-        - name: PAPERLESS_AI_ENABLED
-          value: "true"
-        - name: PAPERLESS_AI_LLM_BACKEND
-          value: "ollama"
-        # NOTA: la variabile corretta è ENDPOINT, non URL (vedi documentazione)
-        - name: PAPERLESS_AI_LLM_ENDPOINT
-          value: "http://ollama.ollama.svc.cluster.local:11434"
-        - name: PAPERLESS_AI_LLM_MODEL
-          value: "llama3.2:3b"
-        # Aumenta il timeout per elaborazioni lente su CPU (opzionale)
-        - name: PAPERLESS_AI_LLM_TIMEOUT
-          value: "300"
+      extraEnv:
         - name: PAPERLESS_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: paperless-secret
               key: secret-key
 
-    # Routing gestito via HTTPRoute separato (pattern k8s-iannamo)
+        # --- Migrazione 3.x: DB engine obbligatorio ---
+        - name: PAPERLESS_DBENGINE
+          value: "postgresql"
+
+        # --- AI nativa (Paperless 3.x) ---
+        - name: PAPERLESS_AI_ENABLED
+          value: "true"
+        - name: PAPERLESS_AI_LLM_BACKEND
+          value: "ollama"
+        - name: PAPERLESS_AI_LLM_MODEL
+          value: "llama3.2:3b"
+        - name: PAPERLESS_AI_LLM_ENDPOINT
+          value: "http://ollama.ollama.svc.cluster.local:11434"
+        # Embeddings via Ollama (per l'indice dei documenti simili)
+        - name: PAPERLESS_AI_LLM_EMBEDDING_BACKEND
+          value: "ollama"
+        - name: PAPERLESS_AI_LLM_EMBEDDING_MODEL
+          value: "bge-m3"                 # multilingua; in alternativa "embeddinggemma"
+        # Timeout alto: su CPU le risposte possono richiedere >120s
+        - name: PAPERLESS_AI_LLM_REQUEST_TIMEOUT
+          value: "300"
+
     route:
       enabled: false
     ingress:
