@@ -48,10 +48,6 @@ spec:
         - name: config-data
           mountPath: /config
           subPath: pb_data
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
         livenessProbe:
           tcpSocket:
             port: 8080

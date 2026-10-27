@@ -56,11 +56,6 @@ spec:
                   storage: 20Gi
 
         # Lasciamo headroom prima di kill OOM
-        resources:
-          requests:
-            cpu: 66m
-            memory: 896Mi
-
     # ----------------------------------------------------------------
     # Alertmanager — config completa nel Secret SOPS "alertmanager-config"
     # (contiene bot_token, chat_id, routing — tutto cifrato)
@@ -81,11 +76,6 @@ spec:
               resources:
                 requests:
                   storage: 2Gi
-
-        resources:
-          requests:
-            cpu: 50m
-            memory: 64Mi
 
     # ----------------------------------------------------------------
     # Componenti accessori

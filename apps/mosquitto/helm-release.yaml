@@ -96,11 +96,6 @@ spec:
                 name: websocket  # Only websocket port is HTTP-compatible
 
     # Resource limits and requests
-    resources:
-      requests:
-        cpu: 100m
-        memory: 128Mi
-
     # Health checks
     livenessProbe:
       tcpSocket:

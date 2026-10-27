@@ -20,10 +20,6 @@ spec:
     persistence:
       enabled: true
       existingClaim: grafana-storage
-    resources:
-      requests:
-        cpu: "10m"
-        memory: "384Mi"
     # OIDC / Generic OAuth (Authentik) configuration
     grafana.ini:
       server:

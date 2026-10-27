@@ -20,14 +20,6 @@ spec:
       tag: 5.0.0
       pullPolicy: Always
 
-    resources:
-      requests:
-        cpu: "15m"
-        memory: "512Mi"
-      limits:
-        cpu: "500m"
-        memory: "1Gi"
-
     service:
       type: ClusterIP
       port: 3000

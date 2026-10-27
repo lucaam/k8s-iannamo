@@ -26,10 +26,6 @@ spec:
       repository: ghcr.io/lucaam/social-media-reuploader
       tag: "0.8.1"
       pullPolicy: IfNotPresent
-    resources:
-      requests:
-        cpu: "281m"
-        memory: "128Mi"
     service:
       type: ClusterIP
       port: 80

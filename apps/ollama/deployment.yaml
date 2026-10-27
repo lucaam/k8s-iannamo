@@ -77,14 +77,6 @@ spec:
           ports:
             - containerPort: 11434
               name: http
-          resources:
-            requests:
-              memory: "4Gi"
-              cpu: "1000m"
-            limits:
-              memory: "8Gi"
-              cpu: "4000m"
-
       volumes:
         - name: dev-dri
           hostPath:
