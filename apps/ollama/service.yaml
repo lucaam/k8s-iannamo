@@ -5,7 +5,7 @@ metadata:
   namespace: ollama
 spec:
   selector:
-    app: ollama-intel
+    app: ollama
   ports:
     - name: http
       port: 11434
