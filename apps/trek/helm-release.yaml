@@ -17,7 +17,7 @@ spec:
   values:
     image:
       repository: mauriceboe/trek
-      tag: 5.0.0
+      tag: 5.0.1@sha256:6f590b97c09158e92e9bc7d914ea1af207077735f07f7b622b1f6fb690442bc3
       pullPolicy: Always
 
     service:
