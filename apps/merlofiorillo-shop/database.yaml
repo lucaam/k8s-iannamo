@@ -1,0 +1,133 @@
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-mariadb
+  namespace: merlofiorillo-shop
+  labels:
+    app.kubernetes.io/name: mariadb
+    app.kubernetes.io/instance: merlofiorillo-shop
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: wordpress-mariadb
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: mysql
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: wordpress-mariadb
+  namespace: merlofiorillo-shop
+  labels:
+    app.kubernetes.io/name: wordpress-mariadb
+    app.kubernetes.io/instance: merlofiorillo-shop
+    app.kubernetes.io/component: database
+spec:
+  serviceName: wordpress-mariadb
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wordpress-mariadb
+
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wordpress-mariadb
+        app.kubernetes.io/instance: merlofiorillo-shop
+        app.kubernetes.io/component: database
+    spec:
+      terminationGracePeriodSeconds: 120
+
+      containers:
+        - name: mariadb
+          image: mariadb:11.8.9
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: mysql
+              containerPort: 3306
+              protocol: TCP
+
+          env:
+            - name: MARIADB_DATABASE
+              value: wordpress
+
+            - name: MARIADB_USER
+              value: wordpress
+
+            - name: MARIADB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wordpress-secrets
+                  key: mariadb-password
+
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wordpress-secrets
+                  key: mariadb-root-password
+
+            - name: TZ
+              value: Europe/Rome
+
+          volumeMounts:
+            - name: database-storage
+              mountPath: /var/lib/mysql
+
+          startupProbe:
+            exec:
+              command:
+                - healthcheck.sh
+                - --connect
+                - --innodb_initialized
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+
+          readinessProbe:
+            exec:
+              command:
+                - healthcheck.sh
+                - --connect
+                - --innodb_initialized
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+
+          livenessProbe:
+            exec:
+              command:
+                - healthcheck.sh
+                - --connect
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: database-storage
+          persistentVolumeClaim:
+            claimName: mariadb-data
