@@ -7,7 +7,7 @@ resources:
   - home-assistant
   - home-assistant-matter-server
   - immich
-  - open-webui
+  # - open-webui
   # - tado-api-proxy
   - gatus
   - prometheus
@@ -15,6 +15,6 @@ resources:
   - external-services
   - trek
   - social-media-reuploader
-  - paperless-ngx
+  # - paperless-ngx
   - teslamate
-  - ollama
+  # - ollama
