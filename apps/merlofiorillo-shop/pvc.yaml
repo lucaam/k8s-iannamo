@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wordpress-data
+  namespace: merlofiorillo-shop
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-spacex
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-data
+  namespace: merlofiorillo-shop
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-flash
+  resources:
+    requests:
+      storage: 10Gi
