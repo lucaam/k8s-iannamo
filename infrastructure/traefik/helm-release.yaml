@@ -76,9 +76,14 @@ spec:
         enabled: true
         matchRule: Host(`traefik.${DOMAIN}`)
         entryPoints: ["websecure"]
+        # La chart copia questa lista in spec.routes[].middlewares dell'IngressRoute,
+        # che la CRD vuole come oggetti {name, namespace}: le stringhe "nome@provider"
+        # valgono solo per ports.<entrypoint>.http.middlewares (più sopra).
         middlewares:
-          - authentik-forward-auth@kubernetescrd
-          - traefik-errors@kubernetescrd
+          - name: authentik-forward-auth
+            namespace: traefik
+          - name: traefik-errors
+            namespace: traefik
 
     # --- GATEWAY ---
     gateway:
