@@ -22,6 +22,12 @@ spec:
       storageClassName: nfs-spacex
       size: 200Mi
 
+    # Un solo pod alla volta sul DB SQLite in /data: con RollingUpdate il pod
+    # nuovo e quello vecchio (anche su nodi diversi) scriverebbero insieme
+    # sullo stesso file NFS, cosa che SQLite in modalità WAL non supporta.
+    deployment:
+      strategy: Recreate
+
     # Service per Gatus
     service:
       type: ClusterIP
@@ -30,9 +36,10 @@ spec:
 
     externalConfigMap: gatus
 
-    # OIDC values sono app-specific (restano nel secret gatus-secrets).
-    # TELEGRAM è gestito da Flux postBuild.substituteFrom → viene iniettato
-    # direttamente nel ConfigMap al momento dell'apply.
+    # OIDC e Telegram arrivano dal secret gatus-secrets (SOPS) come env:
+    # nella ConfigMap restano i placeholder ${VAR} (scritti $${VAR} per
+    # saltare il postBuild di Flux) e Gatus li espande quando carica il
+    # config. Così il token del bot non finisce in chiaro nella ConfigMap.
     env:
       OIDC_CLIENT_ID:
         valueFrom:
@@ -44,3 +51,13 @@ spec:
           secretKeyRef:
             name: gatus-secrets
             key: OIDC_CLIENT_SECRET
+      TELEGRAM_BOT_TOKEN:
+        valueFrom:
+          secretKeyRef:
+            name: gatus-secrets
+            key: TELEGRAM_BOT_TOKEN
+      TELEGRAM_CHAT_ID:
+        valueFrom:
+          secretKeyRef:
+            name: gatus-secrets
+            key: TELEGRAM_CHAT_ID
