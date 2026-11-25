@@ -22,9 +22,9 @@ spec:
       storageClassName: nfs-spacex
       size: 200Mi
 
-    # Un solo pod alla volta sul DB SQLite in /data: con RollingUpdate il pod
-    # nuovo e quello vecchio (anche su nodi diversi) scriverebbero insieme
-    # sullo stesso file NFS, cosa che SQLite in modalità WAL non supporta.
+    # One pod at a time on the SQLite DB in /data: with RollingUpdate the new
+    # and the old pod (possibly on different nodes) would write the same NFS
+    # file at once, which SQLite in WAL mode does not support.
     deployment:
       strategy: Recreate
 
@@ -36,10 +36,10 @@ spec:
 
     externalConfigMap: gatus
 
-    # OIDC e Telegram arrivano dal secret gatus-secrets (SOPS) come env:
-    # nella ConfigMap restano i placeholder ${VAR} (scritti $${VAR} per
-    # saltare il postBuild di Flux) e Gatus li espande quando carica il
-    # config. Così il token del bot non finisce in chiaro nella ConfigMap.
+    # OIDC and Telegram values come as env vars from the gatus-secrets secret
+    # (SOPS): the ConfigMap keeps only the env placeholders (written with a
+    # double dollar sign to skip Flux postBuild) and Gatus expands them when it
+    # loads the config, so the bot token never lands in the ConfigMap.
     env:
       OIDC_CLIENT_ID:
         valueFrom:
