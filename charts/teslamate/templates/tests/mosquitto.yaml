@@ -1,0 +1,24 @@
+{{- if .Values.mosquitto.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  {{- include "teslamate.testMetadata" (dict "ctx" . "component" "mosquitto") | nindent 2 }}
+spec:
+  {{- include "teslamate.testPodSpec" (dict "ctx" . "uid" 1883) | nindent 2 }}
+  containers:
+    - name: publish
+      image: {{ include "teslamate.image" (dict "ctx" . "image" .Values.mosquitto.image) }}
+      command:
+        - mosquitto_pub
+        - -h
+        - {{ include "teslamate.componentName" (dict "ctx" . "component" "mosquitto") }}
+        - -p
+        - {{ .Values.mosquitto.service.port | quote }}
+        - -t
+        - helm-test
+        - -m
+        - ping
+        - -q
+        - "1"
+      {{- include "teslamate.testContainerSecurityContext" . | nindent 6 }}
+{{- end }}

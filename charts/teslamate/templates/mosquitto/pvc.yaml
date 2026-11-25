@@ -1,0 +1,19 @@
+{{- with .Values.mosquitto.persistence }}
+{{- if and $.Values.mosquitto.enabled .enabled (not .existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "teslamate.componentName" (dict "ctx" $ "component" "mosquitto") }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" $ "component" "mosquitto") | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .accessModes | nindent 4 }}
+  {{- with .storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .size }}
+{{- end }}
+{{- end }}

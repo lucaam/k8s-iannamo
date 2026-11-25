@@ -1,0 +1,46 @@
+{{- if include "teslamate.cnpgEnabled" . }}
+{{- $cnpg := .Values.database.cnpg }}
+{{- $name := include "teslamate.cnpg.clusterName" . }}
+{{- $roles := list (dict "name" $cnpg.owner "ensure" "present" "login" true "superuser" true) }}
+{{- if .Values.grafana.readOnlyUser.enabled }}
+{{- $roles = append $roles (dict "name" .Values.grafana.readOnlyUser.username "ensure" "present" "login" true "inRoles" (list "pg_read_all_data") "passwordSecret" (dict "name" .Values.grafana.readOnlyUser.existingSecret)) }}
+{{- end }}
+{{- $spec := dict
+  "instances" (int $cnpg.instances)
+  "imageName" $cnpg.imageName
+  "imagePullPolicy" $cnpg.imagePullPolicy
+  "storage" (dict "size" $cnpg.storage.size)
+  "resources" $cnpg.resources
+  "affinity" $cnpg.affinity
+  "monitoring" (dict "enablePodMonitor" $cnpg.monitoring.enablePodMonitor)
+}}
+{{- if not $cnpg.extraSpec.bootstrap }}
+{{- $_ := set $spec "bootstrap" (dict "initdb" (dict "database" $cnpg.database "owner" $cnpg.owner "dataChecksums" true)) }}
+{{- end }}
+{{- with $cnpg.storage.storageClass }}{{ $_ := set $spec.storage "storageClass" . }}{{ end }}
+{{- if $cnpg.walStorage.enabled }}
+{{- $_ := set $spec "walStorage" (dict "size" $cnpg.walStorage.size) }}
+{{- with $cnpg.walStorage.storageClass }}{{ $_ := set $spec.walStorage "storageClass" . }}{{ end }}
+{{- end }}
+{{- with $cnpg.parameters }}{{ $_ := set $spec "postgresql" (dict "parameters" .) }}{{ end }}
+{{- $_ := set $spec "managed" (dict "roles" $roles) }}
+{{- with .Values.imagePullSecrets }}{{ $_ := set $spec "imagePullSecrets" . }}{{ end }}
+{{- if $cnpg.backup.enabled }}
+{{- $params := dict "barmanObjectName" $name }}
+{{- with $cnpg.backup.serverName }}{{ $_ := set $params "serverName" . }}{{ end }}
+{{- $_ := set $spec "plugins" (list (dict "name" (include "teslamate.cnpg.backupPlugin" .) "isWALArchiver" true "parameters" $params)) }}
+{{- end }}
+{{- $spec = mergeOverwrite $spec $cnpg.extraSpec }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "database") | nindent 4 }}
+  {{- with include "teslamate.cnpg.annotations" (dict "ctx" . "extra" $cnpg.annotations) | fromYaml }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- toYaml $spec | nindent 2 }}
+{{- end }}

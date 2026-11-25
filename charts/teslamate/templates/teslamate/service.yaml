@@ -1,0 +1,21 @@
+{{- if .Values.teslamate.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslamate.fullname" . }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "teslamate") | nindent 4 }}
+  {{- with .Values.teslamate.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.teslamate.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.teslamate.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "teslamate.selectorLabels" (dict "ctx" . "component" "teslamate") | nindent 4 }}
+{{- end }}

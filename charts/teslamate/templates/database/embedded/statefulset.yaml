@@ -1,0 +1,111 @@
+{{- if include "teslamate.embeddedEnabled" . }}
+{{- $db := .Values.database.embedded }}
+{{- $name := include "teslamate.embedded.name" . }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "postgresql") | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ $name }}
+  selector:
+    matchLabels:
+      {{- include "teslamate.selectorLabels" (dict "ctx" . "component" "postgresql") | nindent 6 }}
+  template:
+    metadata:
+      {{- with $db.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "teslamate.labels" (dict "ctx" . "component" "postgresql") | nindent 8 }}
+        {{- with $db.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "teslamate.imagePullSecrets" . | nindent 6 }}
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- with $db.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $db.podSecurityContext | nindent 8 }}
+      containers:
+        - name: postgresql
+          image: {{ include "teslamate.image" (dict "ctx" . "image" $db.image) }}
+          imagePullPolicy: {{ $db.image.pullPolicy }}
+          ports:
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_DB
+              value: {{ $db.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ $db.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "teslamate.db.secretName" . }}
+                  key: password
+          startupProbe:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -U, {{ $db.username | quote }}, -d, {{ $db.database | quote }}]
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -U, {{ $db.username | quote }}, -d, {{ $db.database | quote }}]
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -U, {{ $db.username | quote }}, -d, {{ $db.database | quote }}]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml $db.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $db.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+            - name: run
+              mountPath: /var/run/postgresql
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+      {{- with $db.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $db.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $db.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "teslamate.selectorLabels" (dict "ctx" . "component" "postgresql") | nindent 10 }}
+      spec:
+        accessModes:
+          {{- toYaml $db.persistence.accessModes | nindent 10 }}
+        {{- with $db.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ $db.persistence.size }}
+{{- end }}

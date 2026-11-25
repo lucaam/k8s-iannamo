@@ -1,0 +1,23 @@
+{{- if .Values.mosquitto.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslamate.componentName" (dict "ctx" . "component" "mosquitto") }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "mosquitto") | nindent 4 }}
+data:
+  mosquitto.conf: |
+    {{- if .Values.mosquitto.config }}
+    {{- .Values.mosquitto.config | nindent 4 }}
+    {{- else }}
+    listener 1883
+    allow_anonymous true
+    log_dest stdout
+    {{- if .Values.mosquitto.persistence.enabled }}
+    persistence true
+    persistence_location /mosquitto/data/
+    {{- else }}
+    persistence false
+    {{- end }}
+    {{- end }}
+{{- end }}

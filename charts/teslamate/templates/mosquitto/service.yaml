@@ -1,0 +1,21 @@
+{{- if .Values.mosquitto.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslamate.componentName" (dict "ctx" . "component" "mosquitto") }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "mosquitto") | nindent 4 }}
+  {{- with .Values.mosquitto.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.mosquitto.service.type }}
+  ports:
+    - name: mqtt
+      port: {{ .Values.mosquitto.service.port }}
+      targetPort: mqtt
+      protocol: TCP
+  selector:
+    {{- include "teslamate.selectorLabels" (dict "ctx" . "component" "mosquitto") | nindent 4 }}
+{{- end }}

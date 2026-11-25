@@ -7,11 +7,12 @@ spec:
   releaseName: teslamate
   chart:
     spec:
-      chart: teslamate
-      version: "0.3.0"
+      # Vendored copy of the upstream chart 0.3.0, whose sources are gone.
+      # See charts/README.md for provenance.
+      chart: ./charts/teslamate
       sourceRef:
-        kind: HelmRepository
-        name: teslamate
+        kind: GitRepository
+        name: flux-system
         namespace: flux-system
   interval: 1h
   targetNamespace: teslamate

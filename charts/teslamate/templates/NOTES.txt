@@ -1,0 +1,48 @@
+TeslaMate {{ .Chart.AppVersion }} has been deployed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+{{- if include "teslamate.cnpgEnabled" . }}
+
+Database: CloudNativePG cluster "{{ include "teslamate.cnpg.clusterName" . }}" ({{ .Values.database.cnpg.instances }} instances).
+{{- if .Values.database.cnpg.keepOnUninstall }}
+  The Cluster and its data are kept on `helm uninstall` (keepOnUninstall=true).
+{{- end }}
+  The owner "{{ .Values.database.cnpg.owner }}" is a SUPERUSER (required by TeslaMate's migrations). Use this database only for TeslaMate.
+{{- if .Values.database.cnpg.backup.enabled }}
+  Backups: WAL archiving + base backups ({{ .Values.database.cnpg.backup.schedule }}) to {{ .Values.database.cnpg.backup.objectStore.destinationPath }}
+{{- else }}
+  Backups are disabled. Backing up your database is your responsibility, see the chart's docs/backups.md.
+{{- end }}
+{{- else if include "teslamate.embeddedEnabled" . }}
+
+WARNING: Embedded database (single-replica PostgreSQL StatefulSet "{{ include "teslamate.embedded.name" . }}").
+  This is a test setup and is not supported: no replication, TLS, backups or automated upgrades.
+  Use database.type=cnpg or external for real use. Its PVC and password Secret are kept on `helm uninstall`.
+{{- end }}
+{{- if .Values.teslamate.enabled }}
+
+TeslaMate UI:
+{{- if .Values.teslamate.ingress.enabled }}
+  https://{{ (first .Values.teslamate.ingress.hosts).host }}
+{{- else }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "teslamate.fullname" . }} 4000:{{ .Values.teslamate.service.port }}
+  then open http://localhost:4000
+{{- end }}
+  TeslaMate has no built-in authentication: put it behind an authenticating proxy before exposing it.
+{{- end }}
+{{- if .Values.grafana.enabled }}
+
+Grafana:
+{{- if .Values.grafana.ingress.enabled }}
+  https://{{ (first .Values.grafana.ingress.hosts).host }}
+{{- else }}
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "teslamate.componentName" (dict "ctx" . "component" "grafana") }} 3000:{{ .Values.grafana.service.port }}
+{{- end }}
+{{- if not .Values.grafana.existingAdminSecret }}
+  Initial login admin/admin (you will be asked to change it). Set grafana.existingAdminSecret to manage it.
+{{- end }}
+{{- end }}
+{{- if .Values.mosquitto.enabled }}
+
+MQTT broker (anonymous, cluster-internal): {{ include "teslamate.componentName" (dict "ctx" . "component" "mosquitto") }}.{{ .Release.Namespace }}.svc:{{ .Values.mosquitto.service.port }}
+{{- end }}
+
+Run the chart's tests with: helm test {{ .Release.Name }} -n {{ .Release.Namespace }}

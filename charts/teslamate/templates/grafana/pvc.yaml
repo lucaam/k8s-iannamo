@@ -1,0 +1,19 @@
+{{- with .Values.grafana.persistence }}
+{{- if and $.Values.grafana.enabled .enabled (not .existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "teslamate.componentName" (dict "ctx" $ "component" "grafana") }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" $ "component" "grafana") | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .accessModes | nindent 4 }}
+  {{- with .storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .size }}
+{{- end }}
+{{- end }}

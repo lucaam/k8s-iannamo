@@ -1,0 +1,60 @@
+{{- $cnpg := include "teslamate.cnpgEnabled" . }}
+{{- if or $cnpg (include "teslamate.embeddedEnabled" .) }}
+{{- $clusterName := include "teslamate.cnpg.clusterName" . }}
+apiVersion: v1
+kind: Pod
+metadata:
+  {{- include "teslamate.testMetadata" (dict "ctx" . "component" "database") | nindent 2 }}
+spec:
+  {{- include "teslamate.testPodSpec" (dict "ctx" . "uid" (ternary 26 999 (eq $cnpg "true"))) | nindent 2 }}
+  containers:
+    - name: psql
+      image: {{ ternary .Values.database.cnpg.imageName (include "teslamate.image" (dict "ctx" . "image" .Values.database.embedded.image)) (eq $cnpg "true") }}
+      command:
+        - sh
+        - -ec
+        - |
+          q() { psql --no-psqlrc -XAtq -v ON_ERROR_STOP=1 -c "$1"; }
+          test "$(q "select count(*) from pg_extension where extname in ('cube','earthdistance')")" = 2
+          test "$(q "select count(*) > 0 from schema_migrations")" = t
+          {{- if $cnpg }}
+          test "$(q "select ssl from pg_stat_ssl where pid = pg_backend_pid()")" = t
+          {{- end }}
+          test "$(q "select rolsuper from pg_roles where rolname = current_user")" = t
+          {{- if .Values.grafana.readOnlyUser.enabled }}
+          test "$(q "select pg_has_role('{{ .Values.grafana.readOnlyUser.username }}', 'pg_read_all_data', 'member')")" = t
+          {{- end }}
+          echo "database OK"
+      env:
+        - name: PGHOST
+          value: {{ include "teslamate.db.host" . | quote }}
+        - name: PGDATABASE
+          value: {{ include "teslamate.db.name" . | quote }}
+        - name: PGUSER
+          value: {{ include "teslamate.db.user" . | quote }}
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "teslamate.db.secretName" . }}
+              key: password
+        {{- if $cnpg }}
+        - name: PGSSLMODE
+          value: verify-full
+        - name: PGSSLROOTCERT
+          value: /etc/db-ca/ca.crt
+        {{- end }}
+      {{- include "teslamate.testContainerSecurityContext" . | nindent 6 }}
+      {{- if $cnpg }}
+      volumeMounts:
+        - name: db-ca
+          mountPath: /etc/db-ca
+          readOnly: true
+  volumes:
+    - name: db-ca
+      secret:
+        secretName: {{ $clusterName }}-ca
+        items:
+          - key: ca.crt
+            path: ca.crt
+      {{- end }}
+{{- end }}

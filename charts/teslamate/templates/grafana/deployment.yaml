@@ -1,0 +1,129 @@
+{{- if .Values.grafana.enabled }}
+{{- $gf := .Values.grafana }}
+{{- $cnpg := include "teslamate.cnpgEnabled" . }}
+{{- $name := include "teslamate.componentName" (dict "ctx" . "component" "grafana") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "grafana") | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "teslamate.selectorLabels" (dict "ctx" . "component" "grafana") | nindent 6 }}
+  template:
+    metadata:
+      {{- with $gf.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "teslamate.labels" (dict "ctx" . "component" "grafana") | nindent 8 }}
+        {{- with $gf.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "teslamate.imagePullSecrets" . | nindent 6 }}
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- with $gf.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $gf.podSecurityContext | nindent 8 }}
+      containers:
+        - name: grafana
+          image: {{ include "teslamate.image" (dict "ctx" . "image" $gf.image) }}
+          imagePullPolicy: {{ $gf.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DATABASE_HOST
+              value: {{ include "teslamate.db.host" . | quote }}
+            - name: DATABASE_PORT
+              value: {{ include "teslamate.db.port" . | quote }}
+            - name: DATABASE_NAME
+              value: {{ include "teslamate.db.name" . | quote }}
+            - name: DATABASE_SSL_MODE
+              value: {{ $gf.databaseSslMode | default (ternary "require" "disable" (eq $cnpg "true")) | quote }}
+            {{- if $gf.readOnlyUser.enabled }}
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $gf.readOnlyUser.existingSecret }}
+                  key: username
+            - name: DATABASE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $gf.readOnlyUser.existingSecret }}
+                  key: password
+            {{- else }}
+            - name: DATABASE_USER
+              value: {{ include "teslamate.db.user" . | quote }}
+            - name: DATABASE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "teslamate.db.secretName" . }}
+                  key: {{ include "teslamate.db.passwordKey" . }}
+            {{- end }}
+            {{- with $gf.existingAdminSecret }}
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: admin-password
+            {{- end }}
+            {{- with $gf.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with $gf.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $gf.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $gf.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml $gf.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $gf.securityContext | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/grafana
+      volumes:
+        - name: data
+          {{- if $gf.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ $gf.persistence.existingClaim | default $name }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with $gf.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $gf.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $gf.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

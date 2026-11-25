@@ -1,0 +1,31 @@
+# Repo-only files, excluded from the packaged chart.
+# Directories are anchored so templates/tests/ (Helm test hooks) stays; avoid negation patterns (break Helm 4).
+.git/
+.github/
+.gitignore
+.gitattributes
+.pre-commit-config.yaml
+.editorconfig
+.vscode/
+.idea/
+/docs/
+/tests/
+/scripts/
+/ci/
+ct.yaml
+renovate.json
+artifacthub-repo.yml
+README.md.gotmpl
+CHANGELOG.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+/*.tgz
+*.swp
+*.bak
+*.tmp
+*~
+/dist/
+.claude/
+CLAUDE.local.md
+NOTES.md

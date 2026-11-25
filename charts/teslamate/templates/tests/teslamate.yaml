@@ -1,0 +1,21 @@
+{{- if .Values.teslamate.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  {{- include "teslamate.testMetadata" (dict "ctx" . "component" "teslamate") | nindent 2 }}
+spec:
+  {{- include "teslamate.testPodSpec" (dict "ctx" .) | nindent 2 }}
+  containers:
+    - name: http
+      image: {{ printf "%s:%s" .Values.tests.curlImage.repository .Values.tests.curlImage.tag }}
+      args:
+        - --fail
+        - --silent
+        - --show-error
+        - --retry=10
+        - --retry-all-errors
+        - --retry-delay=3
+        - --output=/dev/null
+        - http://{{ include "teslamate.fullname" . }}:{{ .Values.teslamate.service.port }}/sign_in
+      {{- include "teslamate.testContainerSecurityContext" . | nindent 6 }}
+{{- end }}

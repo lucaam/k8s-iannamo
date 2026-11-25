@@ -1,0 +1,19 @@
+{{- if and (include "teslamate.cnpgEnabled" .) .Values.database.cnpg.backup.enabled }}
+{{- $cnpg := .Values.database.cnpg }}
+{{- $name := include "teslamate.cnpg.clusterName" . }}
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "database") | nindent 4 }}
+  {{- /* Kept with the Cluster, otherwise its WAL archiving breaks after an uninstall. */}}
+  {{- with include "teslamate.cnpg.annotations" (dict "ctx" . "extra" dict) | fromYaml }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  retentionPolicy: {{ $cnpg.backup.retentionPolicy | quote }}
+  configuration:
+    {{- toYaml (include "teslamate.compact" $cnpg.backup.objectStore | fromYaml) | nindent 4 }}
+{{- end }}

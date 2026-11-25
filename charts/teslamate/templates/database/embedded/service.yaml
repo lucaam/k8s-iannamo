@@ -1,0 +1,17 @@
+{{- if include "teslamate.embeddedEnabled" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "teslamate.embedded.name" . }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "postgresql") | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: postgresql
+      protocol: TCP
+  selector:
+    {{- include "teslamate.selectorLabels" (dict "ctx" . "component" "postgresql") | nindent 4 }}
+{{- end }}

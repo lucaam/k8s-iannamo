@@ -1,0 +1,19 @@
+{{- if and (include "teslamate.cnpgEnabled" .) .Values.database.cnpg.backup.enabled }}
+{{- $cnpg := .Values.database.cnpg }}
+{{- $name := include "teslamate.cnpg.clusterName" . }}
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "database") | nindent 4 }}
+spec:
+  schedule: {{ $cnpg.backup.schedule | quote }}
+  immediate: {{ $cnpg.backup.immediate }}
+  backupOwnerReference: self
+  cluster:
+    name: {{ $name }}
+  method: plugin
+  pluginConfiguration:
+    name: {{ include "teslamate.cnpg.backupPlugin" . }}
+{{- end }}

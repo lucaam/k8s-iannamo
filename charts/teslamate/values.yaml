@@ -1,0 +1,361 @@
+# -- Override the chart name used in resource names.
+nameOverride: ""
+# -- Override the full resource name prefix.
+fullnameOverride: ""
+# -- Labels added to every resource rendered by this chart.
+commonLabels: {}
+# -- Image pull secrets for all pods rendered by this chart.
+imagePullSecrets: []
+
+teslamate:
+  # -- Deploy TeslaMate.
+  enabled: true
+  image:
+    repository: teslamate/teslamate
+    # -- Defaults to the chart appVersion.
+    tag: ""
+    pullPolicy: IfNotPresent
+  # -- Key used to encrypt the Tesla API tokens. Required unless `teslamate.existingSecret` is set.
+  # Losing or changing it makes the stored tokens unreadable.
+  encryptionKey: ""
+  # -- Existing secret holding the encryption key (recommended).
+  existingSecret: ""
+  # -- Key inside `existingSecret` holding the encryption key.
+  existingSecretKey: ENCRYPTION_KEY
+  # -- Time zone, e.g. `Europe/Berlin`.
+  timezone: ""
+  # -- Public host name (`VIRTUAL_HOST`). Defaults to the first ingress host.
+  virtualHost: ""
+  # -- `CHECK_ORIGIN`: `true`, `false` or a comma-separated list of allowed origins.
+  # Defaults to `true` when a virtual host is known (`virtualHost` or ingress), otherwise unset (upstream default `false`).
+  checkOrigin: ""
+  mqtt:
+    # -- Publish vehicle data to MQTT. `false` sets `DISABLE_MQTT=true`.
+    enabled: true
+    # -- Broker host. Defaults to the bundled Mosquitto service when `mosquitto.enabled`.
+    host: ""
+    port: 1883
+    # -- Existing secret with `username`/`password` keys for broker authentication.
+    existingSecret: ""
+    tls: false
+    tlsAcceptInvalidCerts: false
+    namespace: ""
+  # -- Extra environment variables, see https://docs.teslamate.org/docs/configuration/environment_variables
+  extraEnv: []
+  extraEnvFrom: []
+  import:
+    # -- Mount a volume at `/opt/app/import` for TeslaFi/tesla-apiscraper imports.
+    enabled: false
+    existingClaim: ""
+    size: 1Gi
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+  service:
+    type: ClusterIP
+    port: 4000
+    annotations: {}
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: teslamate.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 10000
+    runAsGroup: 10001
+    fsGroup: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+  startupProbe:
+    httpGet:
+      path: /
+      port: http
+    periodSeconds: 10
+    failureThreshold: 30
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    periodSeconds: 30
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    periodSeconds: 10
+    timeoutSeconds: 5
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  priorityClassName: ""
+
+grafana:
+  # -- Deploy the TeslaMate Grafana image with all dashboards preinstalled.
+  enabled: true
+  image:
+    repository: teslamate/grafana
+    # -- Defaults to the chart appVersion.
+    tag: ""
+    pullPolicy: IfNotPresent
+  # -- Existing secret with `admin-user`/`admin-password` keys. Without it Grafana starts with admin/admin
+  # and forces a password change on first login.
+  existingAdminSecret: ""
+  # -- PostgreSQL `sslmode` used by the Grafana datasource.
+  # Defaults to `require` with the CNPG database and `disable` for external databases.
+  databaseSslMode: ""
+  readOnlyUser:
+    # -- Connect Grafana with a dedicated read-only role (`pg_read_all_data`) instead of the TeslaMate owner.
+    # Only with `database.type=cnpg`. Requires `existingSecret`.
+    enabled: false
+    # -- Role name.
+    username: grafana
+    # -- Existing `kubernetes.io/basic-auth` secret whose `username` matches `readOnlyUser.username`.
+    existingSecret: ""
+  # -- Extra environment variables, e.g. `GF_SERVER_ROOT_URL`.
+  extraEnv: []
+  extraEnvFrom: []
+  persistence:
+    enabled: true
+    existingClaim: ""
+    size: 1Gi
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+  service:
+    type: ClusterIP
+    port: 3000
+    annotations: {}
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: grafana.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 472
+    runAsGroup: 0
+    fsGroup: 472
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: http
+    periodSeconds: 10
+    timeoutSeconds: 5
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  priorityClassName: ""
+
+mosquitto:
+  # -- Deploy an in-cluster Mosquitto broker for TeslaMate's MQTT output.
+  enabled: true
+  image:
+    repository: eclipse-mosquitto
+    tag: 2.1.2-alpine
+    pullPolicy: IfNotPresent
+  # -- Full `mosquitto.conf`. Defaults to an anonymous listener on 1883 (cluster-internal only by default).
+  config: ""
+  persistence:
+    # -- Persist retained messages and the subscription database.
+    enabled: false
+    existingClaim: ""
+    size: 1Gi
+    storageClass: ""
+    accessModes: [ReadWriteOnce]
+  service:
+    type: ClusterIP
+    port: 1883
+    annotations: {}
+  resources:
+    requests:
+      cpu: 10m
+      memory: 16Mi
+    limits:
+      memory: 64Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1883
+    runAsGroup: 1883
+    fsGroup: 1883
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  priorityClassName: ""
+
+database:
+  # -- `cnpg` deploys a CloudNativePG cluster (requires the CNPG operator, installed separately);
+  # `external` uses an existing PostgreSQL server; `embedded` deploys a single-replica PostgreSQL StatefulSet
+  # (test setup only, not supported: no replication, TLS, backups or automated upgrades).
+  type: cnpg
+
+  embedded:
+    image:
+      repository: postgres
+      tag: 18.6-trixie
+      pullPolicy: IfNotPresent
+    database: teslamate
+    # -- Database owner, created as the image's SUPERUSER (`POSTGRES_USER`).
+    username: teslamate
+    # -- Existing secret with the owner password (key `password`). Without it a random password is generated
+    # and kept across upgrades and uninstalls.
+    existingSecret: ""
+    persistence:
+      size: 5Gi
+      storageClass: ""
+      accessModes: [ReadWriteOnce]
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 999
+      runAsGroup: 999
+      fsGroup: 999
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: [ALL]
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    priorityClassName: ""
+
+  external:
+    host: ""
+    port: 5432
+    database: teslamate
+    username: teslamate
+    # -- Existing secret holding the password.
+    existingSecret: ""
+    existingSecretPasswordKey: password
+    # -- `DATABASE_SSL` for TeslaMate: `false`, `true` or `noverify`.
+    ssl: "false"
+
+  cnpg:
+    # -- PostgreSQL instances (1 primary + n-1 streaming replicas). Minimum 2.
+    instances: 2
+    imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+    imagePullPolicy: IfNotPresent
+    database: teslamate
+    # -- Database owner. Always a SUPERUSER, as TeslaMate's migrations require it.
+    owner: teslamate
+    storage:
+      size: 5Gi
+      storageClass: ""
+    walStorage:
+      enabled: false
+      size: 2Gi
+      storageClass: ""
+    resources:
+      requests:
+        cpu: 50m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    # -- PostgreSQL parameters.
+    parameters: {}
+    affinity:
+      enablePodAntiAffinity: true
+      topologyKey: kubernetes.io/hostname
+      # -- `preferred` or `required`. `required` needs at least `instances` schedulable nodes.
+      podAntiAffinityType: preferred
+    monitoring:
+      # -- Create a PodMonitor (requires the Prometheus Operator CRDs).
+      enablePodMonitor: false
+    # -- Extra annotations for the Cluster resource.
+    annotations: {}
+    # -- Keep the Cluster (and its data) on `helm uninstall` via `helm.sh/resource-policy: keep`.
+    keepOnUninstall: true
+    # -- Merged into the generated Cluster `spec` (escape hatch for any CNPG feature).
+    # Setting `bootstrap` replaces the default `initdb`, e.g. to restore from a backup.
+    extraSpec: {}
+
+    backup:
+      # -- Enable WAL archiving and scheduled base backups through the Barman Cloud plugin
+      # (installed separately in the operator's namespace).
+      enabled: false
+      # -- Six-field cron (seconds first) for base backups.
+      schedule: "0 0 3 * * *"
+      # -- Start a backup as soon as the ScheduledBackup is created.
+      immediate: true
+      # -- Barman retention policy applied by the plugin.
+      retentionPolicy: 30d
+      # -- Folder name inside `destinationPath`. Defaults to the Cluster name.
+      # Use a new one after a restore: a non-empty WAL archive is refused.
+      serverName: ""
+      # -- `spec.configuration` of the Barman Cloud `ObjectStore`
+      # (destinationPath, endpointURL, s3Credentials/azureCredentials/googleCredentials, wal, data, ...).
+      objectStore:
+        destinationPath: ""
+        endpointURL: ""
+        s3Credentials: {}
+        wal:
+          compression: gzip
+        data:
+          compression: gzip
+
+# -- Images used by `helm test`.
+tests:
+  curlImage:
+    repository: curlimages/curl
+    tag: 8.23.0

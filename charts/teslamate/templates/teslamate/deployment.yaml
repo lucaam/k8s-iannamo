@@ -1,0 +1,159 @@
+{{- if .Values.teslamate.enabled }}
+{{- $tm := .Values.teslamate }}
+{{- $cnpg := include "teslamate.cnpgEnabled" . }}
+{{- $clusterName := include "teslamate.cnpg.clusterName" . }}
+{{- $virtualHost := $tm.virtualHost | default (and $tm.ingress.enabled (first $tm.ingress.hosts).host) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslamate.fullname" . }}
+  labels:
+    {{- include "teslamate.labels" (dict "ctx" . "component" "teslamate") | nindent 4 }}
+spec:
+  # TeslaMate keeps per-vehicle state machines in memory; never run two instances.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "teslamate.selectorLabels" (dict "ctx" . "component" "teslamate") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- if not $tm.existingSecret }}
+        checksum/secret: {{ include (print $.Template.BasePath "/teslamate/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with $tm.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "teslamate.labels" (dict "ctx" . "component" "teslamate") | nindent 8 }}
+        {{- with $tm.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "teslamate.imagePullSecrets" . | nindent 6 }}
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      {{- with $tm.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $tm.podSecurityContext | nindent 8 }}
+      containers:
+        - name: teslamate
+          image: {{ include "teslamate.image" (dict "ctx" . "image" $tm.image) }}
+          imagePullPolicy: {{ $tm.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 4000
+              protocol: TCP
+          env:
+            {{- include "teslamate.teslamateEnv" . | nindent 12 }}
+            {{- if $tm.mqtt.enabled }}
+            - name: MQTT_HOST
+              value: {{ include "teslamate.mqttHost" . | quote }}
+            - name: MQTT_PORT
+              value: {{ $tm.mqtt.port | quote }}
+            {{- with $tm.mqtt.existingSecret }}
+            - name: MQTT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: username
+            - name: MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . }}
+                  key: password
+            {{- end }}
+            {{- if $tm.mqtt.tls }}
+            - name: MQTT_TLS
+              value: "true"
+            - name: MQTT_TLS_ACCEPT_INVALID_CERTS
+              value: {{ $tm.mqtt.tlsAcceptInvalidCerts | quote }}
+            {{- end }}
+            {{- with $tm.mqtt.namespace }}
+            - name: MQTT_NAMESPACE
+              value: {{ . | quote }}
+            {{- end }}
+            {{- else }}
+            - name: DISABLE_MQTT
+              value: "true"
+            {{- end }}
+            {{- with $tm.timezone }}
+            - name: TZ
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $virtualHost }}
+            - name: VIRTUAL_HOST
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with ($tm.checkOrigin | default (and $virtualHost "true")) }}
+            - name: CHECK_ORIGIN
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if $tm.import.enabled }}
+            - name: IMPORT_DIR
+              value: /opt/app/import
+            {{- end }}
+            {{- with $tm.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with $tm.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $tm.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $tm.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $tm.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml $tm.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $tm.securityContext | nindent 12 }}
+          volumeMounts:
+            {{- include "teslamate.teslamateVolumeMounts" . | nindent 12 }}
+            {{- if $tm.import.enabled }}
+            - name: import
+              mountPath: /opt/app/import
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: srtm-cache
+          emptyDir: {}
+        {{- if $cnpg }}
+        - name: db-ca
+          secret:
+            secretName: {{ $clusterName }}-ca
+            items:
+              - key: ca.crt
+                path: ca.crt
+        {{- end }}
+        {{- if $tm.import.enabled }}
+        - name: import
+          persistentVolumeClaim:
+            claimName: {{ $tm.import.existingClaim | default (include "teslamate.componentName" (dict "ctx" . "component" "import")) }}
+        {{- end }}
+      {{- with $tm.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $tm.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $tm.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
