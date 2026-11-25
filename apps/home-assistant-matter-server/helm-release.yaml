@@ -53,7 +53,7 @@ spec:
     image:
       repository: matter-js/matterjs-server
       pullPolicy: IfNotPresent
-      tag: "1.5.5"
+      tag: "1.6.0"
 
     log:
       logLevel: info
