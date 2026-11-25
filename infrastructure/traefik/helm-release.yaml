@@ -76,9 +76,9 @@ spec:
         enabled: true
         matchRule: Host(`traefik.${DOMAIN}`)
         entryPoints: ["websecure"]
-        # La chart copia questa lista in spec.routes[].middlewares dell'IngressRoute,
-        # che la CRD vuole come oggetti {name, namespace}: le stringhe "nome@provider"
-        # valgono solo per ports.<entrypoint>.http.middlewares (più sopra).
+        # The chart copies this list into spec.routes[].middlewares of the
+        # IngressRoute, whose CRD requires {name, namespace} objects: plain
+        # "name@provider" strings only work in ports.<entrypoint>.http.middlewares.
         middlewares:
           - name: authentik-forward-auth
             namespace: traefik

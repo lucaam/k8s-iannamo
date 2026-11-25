@@ -6,9 +6,9 @@ metadata:
 data:
   config.yaml: |-
     # Gatus configuration with OIDC authentication
-    # Storico su SQLite nel PVC gatus-data, montato dal chart su
-    # persistence.mountPath (/data). Il vecchio "type: storage" non è un tipo
-    # valido e Gatus ripiegava sulla memoria, perdendo lo storico a ogni riavvio.
+    # History is stored in SQLite on the gatus-data PVC, mounted by the chart at
+    # persistence.mountPath (/data). The old "type: storage" is not a valid type
+    # and Gatus silently fell back to memory, losing history on every restart.
     storage:
       type: sqlite
       path: /data/data.db
@@ -24,9 +24,9 @@ data:
         scopes: ["openid"]
 
     alerting:
-      # Token e chat id arrivano come env dal secret gatus-secrets (vedi
-      # helm-release.yaml) e li espande Gatus: il doppio dollaro evita la
-      # sostituzione di Flux postBuild, come per le credenziali OIDC.
+      # Token and chat id come as env vars from the gatus-secrets secret (see
+      # helm-release.yaml) and Gatus expands them: the double dollar sign keeps
+      # Flux postBuild from substituting them, as for the OIDC credentials.
       telegram:
         token: "$${TELEGRAM_BOT_TOKEN}"
         id: "$${TELEGRAM_CHAT_ID}"
@@ -92,10 +92,10 @@ data:
       # ========================================
       # 🚦 GATEWAY & INGRESS
       # ========================================
-      # L'entrypoint web (:80) risponde sempre 301 verso https. Seguendo il
-      # redirect Gatus falliva la verifica TLS, perché il certificato wildcard
-      # non copre gli hostname interni: il redirect non si segue e il 301
-      # diventa la prova che Traefik risponde.
+      # The web entrypoint (:80) always answers 301 to https. Following the
+      # redirect, Gatus failed TLS verification because the wildcard certificate
+      # does not cover internal hostnames: the redirect is not followed and the
+      # 301 is the proof that Traefik answers.
       - name: "Traefik Gateway"
         group: "Gateway"
         url: "http://traefik.traefik.svc.cluster.local:80"
@@ -108,10 +108,10 @@ data:
         alerts:
           - type: telegram
 
-      # VIP MetalLB del Service traefik (metallb.io/loadBalancerIPs in
-      # infrastructure/traefik/helm-release.yaml). Dall'interno del cluster il
-      # VIP lo instrada kube-proxy: il check verifica che sia assegnato e
-      # risponda, non l'annuncio L2 sulla LAN.
+      # MetalLB VIP of the traefik Service (metallb.io/loadBalancerIPs in
+      # infrastructure/traefik/helm-release.yaml). From inside the cluster the
+      # VIP is routed by kube-proxy: the check verifies that it is assigned and
+      # answering, not the L2 announcement on the LAN.
       - name: "Traefik LoadBalancer"
         group: "Gateway"
         url: "http://192.168.178.10"
