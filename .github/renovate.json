@@ -158,20 +158,18 @@
       "labels": ["needs-review", "stateful"]
     },
     {
-      "description": "TeslaMate: manual review for minor+",
-      "matchDatasources": ["helm"],
-      "matchPackageNames": ["teslamate"],
-      "matchUpdateTypes": ["minor", "major"],
+      "description": "trek: the chart (Git tag of liketrek/TREK) and the image move together, reviewed by hand",
+      "matchFileNames": ["apps/trek/**"],
+      "groupName": "trek",
       "automerge": false,
-      "labels": ["needs-review", "helm"]
+      "labels": ["needs-review"]
     },
     {
-      "description": "TeslaMate images: manual review for minor+",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["teslamate/teslamate", "teslamate/grafana"],
-      "matchUpdateTypes": ["minor", "major"],
+      "description": "social-media-reuploader: the chart (Git tag) and the images move together, reviewed by hand",
+      "matchFileNames": ["apps/social-media-reuploader/**"],
+      "groupName": "social-media-reuploader",
       "automerge": false,
-      "labels": ["needs-review", "docker"]
+      "labels": ["needs-review"]
     },
     {
       "description": "matter-js/matterjs-server is hosted on GHCR, not Docker Hub. Lookup there and skip digest pinning.",
