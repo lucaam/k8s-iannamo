@@ -72,17 +72,14 @@ spec:
     # Set the dnsPolicy (you'll want ClusterFirstWithHostNet if running on hostNetwork to reac
     # other k8s services via DNS
     dnsPolicy: ClusterFirstWithHostNet
-    # No "rotate" option: c-ares (HA's aiohttp resolver) honors it and would
-    # spread queries over all three nameservers; the router and 1.1.1.1 answer
-    # NXDOMAIN for *.cluster.local, which is final, so in-cluster lookups could
-    # fail intermittently. Without it c-ares asks CoreDNS first and falls back
-    # only on timeout or server failure. musl (getaddrinfo) ignores "rotate"
-    # and queries all nameservers in parallel.
+    # CoreDNS is the only nameserver: ClusterFirstWithHostNet already sets it.
+    # The router and 1.1.1.1 used to be listed as extra nameservers, but they
+    # answer NXDOMAIN for *.cluster.local and that answer is final: musl
+    # (getaddrinfo) queries every nameserver in parallel, and the "rotate"
+    # option made c-ares (HA's aiohttp resolver) spread queries over all of
+    # them, so in-cluster names failed intermittently. CoreDNS forwards
+    # external names upstream anyway.
     dnsConfig:
-      nameservers:
-        - 10.96.0.10         # CoreDNS (primary)
-        - 192.168.178.1      # Local router (fallback)
-        - 1.1.1.1            # Cloudflare (external fallback)
       searches:
         - home-assistant.svc.cluster.local
         - svc.cluster.local
