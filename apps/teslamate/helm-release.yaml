@@ -24,6 +24,33 @@ spec:
     remediation:
       retries: 3
 
+  # TeslaMate is parked: the pods are stopped and the database is hibernated,
+  # but every piece of data is kept so that the app can be brought back.
+  # The CNPG Cluster already carries helm.sh/resource-policy: keep (chart
+  # default database.cnpg.keepOnUninstall); the Grafana PVC gets it below,
+  # so that removing this HelmRelease later leaves both in place.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: PersistentVolumeClaim
+              name: teslamate-grafana
+            patch: |
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: teslamate-grafana
+                annotations:
+                  helm.sh/resource-policy: keep
+          - target:
+              group: apps
+              kind: Deployment
+              labelSelector: app.kubernetes.io/instance=teslamate
+            patch: |
+              - op: replace
+                path: /spec/replicas
+                value: 0
+
   values:
     teslamate:
       existingSecret: teslamate-encryption
@@ -34,6 +61,9 @@ spec:
     database:
       type: cnpg
       cnpg:
+        # Declarative hibernation: CNPG stops the instances and keeps the PVCs.
+        annotations:
+          cnpg.io/hibernation: "on"
         storage:
           size: 5Gi
           storageClass: nfs-flash
@@ -60,15 +90,15 @@ spec:
           - ReadWriteMany
         size: 1Gi
 
-      # ⚠️ grafana.ini rimosso: non supportato dalla chart 0.3.0
-      # Tutta la configurazione via extraEnv (GF_*)
+      # grafana.ini is not supported by chart 0.3.0:
+      # all configuration goes through extraEnv (GF_*).
 
       extraEnv:
         # --- Server ---
         - name: GF_SERVER_ROOT_URL
           value: "https://grafana-teslamate.${DOMAIN}/"
 
-        # --- Auth di base ---
+        # --- Basic auth ---
         - name: GF_AUTH_OAUTH_AUTO_LOGIN
           value: "true"
         - name: GF_AUTH_DISABLE_LOGIN_FORM
@@ -96,7 +126,7 @@ spec:
         - name: GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN
           value: "true"
 
-        # --- Credenziali da secret (già presenti) ---
+        # --- Credentials from the existing secret ---
         - name: GF_AUTH_GENERIC_OAUTH_CLIENT_ID
           valueFrom:
             secretKeyRef:
