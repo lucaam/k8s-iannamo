@@ -109,8 +109,9 @@ spec:
     tolerations: []
     # Affinity settings for controlling pod scheduling
     affinity: {}
-    # Set a priorityClassName on Home Assistant pods
-    priorityClassName: ""
+    # Critical for the house: preempts standard and low-priority pods when a
+    # node runs out of room (see infrastructure/priority-classes).
+    priorityClassName: homelab-critical
     # No permission-fixing init container. HA runs as root and the NFS export
     # does not squash root, so HA does not need uid 1000 ownership (that was
     # for code-server, now disabled). A recursive chown/chmod of
