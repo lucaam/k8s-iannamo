@@ -72,6 +72,14 @@ spec:
       storageClassName: nfs-spacex
       size: 2Gi
 
+    # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+    resources:
+      requests:
+        cpu: 20m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+
     livenessProbe:
       httpGet:
         path: /

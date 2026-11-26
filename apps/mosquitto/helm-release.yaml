@@ -96,6 +96,14 @@ spec:
                 name: websocket  # Only websocket port is HTTP-compatible
 
     # Resource limits and requests
+    # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
+
     # Health checks
     livenessProbe:
       tcpSocket:
