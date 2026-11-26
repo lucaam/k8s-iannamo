@@ -18,6 +18,8 @@ spec:
   targetNamespace: authentik
   values:
     global:
+      # Server and worker default to this (see infrastructure/priority-classes).
+      priorityClassName: homelab-critical
       security:
         allowInsecureImages: true
     # -- Environment variables to pass to all deployed Deployments. Does not apply to GeoIP
@@ -456,6 +458,8 @@ spec:
         secretKeys:
           userPasswordKey: "postgres-password"      # Key in the secret that holds the password
       primary:
+        # Same priority as the server and worker (see infrastructure/priority-classes).
+        priorityClassName: homelab-critical
         args:
           - -c
           - config_file=/bitnami/postgresql/conf/postgresql.conf
