@@ -5,3 +5,5 @@ resources:
   - helm-repository.yaml
   - helm-release.yaml
   - httproute.yaml
+  - middleware-authentik.yaml
+  - code-server.yaml

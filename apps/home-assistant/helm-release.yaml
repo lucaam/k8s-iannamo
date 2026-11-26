@@ -335,9 +335,9 @@ spec:
       # secretKey: ""
     # Addons configuration for additional services
     addons:
-      # code-server stays disabled: it ran with "--auth none" and, because the
-      # pod uses hostNetwork, it was reachable from the whole LAN on
-      # <node-ip>:12321, bypassing the Authentik-protected route. Edit /config
-      # with kubectl exec/cp instead. Its data in /config/.vscode is kept.
+      # The chart's code-server addon is off: it runs inside this hostNetwork
+      # pod, so it listened on <node-ip>:12321 for the whole LAN, outside
+      # Authentik. code-server now runs in its own pod (code-server.yaml),
+      # reachable only through the Authentik-protected route.
       codeserver:
         enabled: false
