@@ -18,6 +18,8 @@ spec:
   targetNamespace: authentik
   values:
     global:
+      # Server and worker default to this (see infrastructure/priority-classes).
+      priorityClassName: homelab-critical
       security:
         allowInsecureImages: true
     # -- Environment variables to pass to all deployed Deployments. Does not apply to GeoIP
@@ -150,6 +152,14 @@ spec:
       replicas: 1
 
       # -- Resource limits and requests for server pods
+      # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+      resources:
+        requests:
+          cpu: 50m
+          memory: 768Mi
+        limits:
+          memory: 1280Mi
+
       # authentik server container ports
       containerPorts:
         # -- http container port
@@ -359,6 +369,14 @@ spec:
       replicas: 1
 
       # -- Resource limits and requests for the authentik worker
+      # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+      resources:
+        requests:
+          cpu: 60m
+          memory: 896Mi
+        limits:
+          memory: 1536Mi
+
       # authentik worker container ports
       containerPorts:
         # -- http container port
@@ -436,10 +454,12 @@ spec:
       auth:
         database: "authentik"
         username: "authentik"
-        existingSecret: "authentik-secrets"           # Riferimento al secret
+        existingSecret: "authentik-secrets"           # Secret reference
         secretKeys:
-          userPasswordKey: "postgres-password"      # Key nel secret per la password
+          userPasswordKey: "postgres-password"      # Key in the secret that holds the password
       primary:
+        # Same priority as the server and worker (see infrastructure/priority-classes).
+        priorityClassName: homelab-critical
         args:
           - -c
           - config_file=/bitnami/postgresql/conf/postgresql.conf
@@ -476,6 +496,13 @@ spec:
             - ReadWriteMany
         containerSecurityContext:
           readOnlyRootFilesystem: false
+        # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+        resources:
+          requests:
+            cpu: 100m
+            memory: 448Mi
+          limits:
+            memory: 1Gi
       readReplicas:
         resourcesPreset: "none"
       backup:
