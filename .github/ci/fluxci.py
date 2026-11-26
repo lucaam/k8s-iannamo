@@ -1386,18 +1386,26 @@ def cmd_bundle(args: argparse.Namespace) -> int:
     return 0
 
 
-def kubeconform_report(data: dict, allowed_missing: set[str], report: Report) -> None:
+def kubeconform_report(data: dict, allowed_missing: set[str], ignore: list[dict], report: Report) -> None:
+    def ignored(kind: str, message: str) -> bool:
+        return any(rule.get("kind") in (None, kind) and str(rule.get("message", "")) in message for rule in ignore)
+
     missing: dict[str, int] = {}
     for r in data.get("resources") or []:
         status = r.get("status")
         where = Path(str(r.get("filename") or "")).name
-        what = f"{r.get('kind')} {r.get('name')}"
+        kind = str(r.get("kind"))
+        what = f"{kind} {r.get('name')}"
         if status in ("statusInvalid", "statusError"):
-            errs = r.get("validationErrors") or []
-            detail = "; ".join(f"{e.get('path') or '/'}: {e.get('msg')}" for e in errs) or str(r.get("msg"))
-            report.error(f"{where}: {what}: {detail}")
+            errs = [f"{e.get('path') or '/'}: {e.get('msg')}" for e in r.get("validationErrors") or []] \
+                or [str(r.get("msg"))]
+            kept = [e for e in errs if not ignored(kind, e)]
+            if kept:
+                report.error(f"{where}: {what}: {'; '.join(kept)}")
+            else:
+                report.note(f"{where}: {what}: ignored by kubeconform.ignoreErrors: {'; '.join(errs)}")
         elif status == "statusSkipped":
-            key = f"{r.get('version')}/{r.get('kind')}"
+            key = f"{r.get('version')}/{kind}"
             missing[key] = missing.get(key, 0) + 1
     for key, n in sorted(missing.items()):
         if key in allowed_missing:
@@ -1438,7 +1446,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
         cmd += ["-schema-location", loc]
     p = subprocess.run(cmd + files, capture_output=True, text=True)
     try:
-        kubeconform_report(json.loads(p.stdout or "{}"), set(kc.get("allowMissingSchemas") or []), report)
+        kubeconform_report(json.loads(p.stdout or "{}"), set(kc.get("allowMissingSchemas") or []),
+                           kc.get("ignoreErrors") or [], report)
     except json.JSONDecodeError:
         report.error(f"kubeconform did not produce a report (exit {p.returncode}): {p.stderr.strip()[-1500:]}")
     if p.returncode not in (0, 1):

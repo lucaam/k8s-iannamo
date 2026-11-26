@@ -8,11 +8,11 @@ import rego.v1
 exceptions := {
 	"image-tag": {
 		# busybox without a tag in the fix-permissions initContainer; removed by
-		# the Home Assistant hardening PR (fix/home-assistant-hardening).
+		# the Home Assistant hardening PR (#421).
 		"StatefulSet home-assistant/home-assistant",
 	},
 	"helmrelease-version": {
-		# The chart version floats; the grafana pin PR fixes it to the deployed
+		# The chart version floats; #413 pins it to the deployed
 		# 10.5.15.
 		"HelmRelease grafana/grafana",
 	},

@@ -25,7 +25,18 @@ kubeconform:
     # datreeio/CRDs-catalog pinned to a commit: fallback for CRDs not in the repository.
     - https://raw.githubusercontent.com/datreeio/CRDs-catalog/04af58d740718c4dc719441bf39fb284c784f4a8/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
   # apiVersion/Kind pairs that have no schema anywhere. Keep this list short.
-  allowMissingSchemas: []
+  allowMissingSchemas:
+    # Not published by yannh/kubernetes-json-schema; the CRDs themselves are
+    # parsed by fluxci to generate the schemas of their custom resources.
+    - apiextensions.k8s.io/v1/CustomResourceDefinition
+  # Validation errors that are known false positives, matched by kind and a
+  # substring of the message. Each entry needs a reason.
+  ignoreErrors:
+    # Kubernetes 1.31 accepts a StatefulSet without serviceName (kubectl explain
+    # shows it as optional, and zigbee2mqtt runs that way), but the published
+    # schema still lists it as required.
+    - kind: StatefulSet
+      message: "missing property 'serviceName'"
 
 # Plaintext Secrets are searched in every YAML file except these paths.
 secretScanIgnore:
@@ -55,5 +66,5 @@ render:
   # error. Only for known, tracked breakages; remove the entry with the fix.
   allowFailure:
     # The teslamate chart source (oci://ghcr.io/dcardozoo/charts) returns 401
-    # since 2026-11-11 and the app is being retired.
+    # since 2026-11-11; the app is being parked (#415) and then removed.
     - teslamate/teslamate
