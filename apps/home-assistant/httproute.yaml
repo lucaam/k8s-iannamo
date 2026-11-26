@@ -5,16 +5,16 @@ metadata:
   namespace: home-assistant
 spec:
   parentRefs:
-  - name: traefik-gateway
-    namespace: traefik
-    sectionName: websecure
+    - name: traefik-gateway
+      namespace: traefik
+      sectionName: websecure
   hostnames:
-  - "home.${DOMAIN}"
+    - "home.${DOMAIN}"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - name: home-assistant
-      port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: home-assistant
+          port: 8080
