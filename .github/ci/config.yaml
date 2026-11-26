@@ -64,7 +64,4 @@ pruneProtection:
 render:
   # HelmReleases whose render failure is reported as a warning instead of an
   # error. Only for known, tracked breakages; remove the entry with the fix.
-  allowFailure:
-    # The teslamate chart source (oci://ghcr.io/dcardozoo/charts) returns 401
-    # since 2026-11-11; the app is being parked (#415) and then removed.
-    - teslamate/teslamate
+  allowFailure: []

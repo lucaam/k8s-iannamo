@@ -14,4 +14,17 @@
 #   retainUntil:  date after which the data should be deleted (YYYY-MM-DD)
 #   reason:       why it was retired
 #   data:         what is kept: Kubernetes objects and host directories
-retained: []
+retained:
+  - app: teslamate
+    namespace: teslamate
+    since: 2026-11-26
+    retainUntil: 2027-02-26
+    reason: >-
+      Not used for now. Its chart source is gone (oci://ghcr.io/dcardozoo/charts
+      answers 401), so bringing it back needs a new chart.
+    data:
+      - "CNPG Cluster teslamate/teslamate-db: hibernated, helm.sh/resource-policy: keep; it owns the PVCs teslamate-db-1 and teslamate-db-2"
+      - "PVC teslamate/teslamate-grafana: helm.sh/resource-policy: keep"
+      - "Namespace teslamate: kustomize.toolkit.fluxcd.io/prune: disabled; also holds the CNPG Secrets teslamate-db-*"
+      - "Host directories /export/flash/teslamate/{teslamate-db-1,teslamate-db-2,teslamate-grafana}, 23 MB in total"
+      - "ENCRYPTION_KEY for the stored Tesla tokens: apps/teslamate/secret-teslamate.sops.yaml in the Git history (pruned from the cluster)"
