@@ -17,6 +17,31 @@ spec:
     crds: Create
   upgrade:
     crds: CreateReplace
+  # The chart has no values for the priority class or for PVC annotations.
+  postRenderers:
+    - kustomize:
+        patches:
+          # Background work: it can wait and never preempts other pods
+          # (see infrastructure/priority-classes).
+          - target:
+              group: apps
+              kind: Deployment
+              labelSelector: app.kubernetes.io/instance=social-media-reuploader
+            patch: |
+              - op: add
+                path: /spec/template/spec/priorityClassName
+                value: homelab-low
+          # keep: a Helm uninstall leaves the PVC and its data in place.
+          - target:
+              kind: PersistentVolumeClaim
+              name: social-media-reuploader-data
+            patch: |
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: social-media-reuploader-data
+                annotations:
+                  helm.sh/resource-policy: keep
   values:
     replicaCount: 1
     serviceAccount:
