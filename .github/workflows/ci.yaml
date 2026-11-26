@@ -251,7 +251,11 @@ jobs:
 
   ci-gate:
     name: ci-gate
-    if: ${{ always() }}
+    # Runs whenever the workflow is not cancelled, so failed or skipped jobs
+    # are always reported. A run superseded by a newer push or label event is
+    # cancelled by the concurrency group: it must not publish a failing
+    # ci-gate next to the one of the newer run.
+    if: ${{ !cancelled() }}
     needs: [changes, lint, manifests, render]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
