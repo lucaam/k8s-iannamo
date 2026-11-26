@@ -1,0 +1,27 @@
+# Pod priorities for the homelab workloads.
+# homelab-standard is the global default: pods created without a priorityClassName get it.
+# The default is applied at pod creation only, so pods that already exist keep priority 0
+# until they are recreated.
+# value and preemptionPolicy are immutable: changing them means recreating the class.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: homelab-critical
+value: 100000
+description: Home automation, ingress, identity and the databases they depend on.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: homelab-standard
+value: 10000
+globalDefault: true
+description: Default for every pod that does not set a priorityClassName.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: homelab-low
+value: 1000
+preemptionPolicy: Never
+description: Batch and tooling workloads. They never preempt other pods.
