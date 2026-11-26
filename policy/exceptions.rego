@@ -11,9 +11,4 @@ exceptions := {
 		# the Home Assistant hardening PR (#421).
 		"StatefulSet home-assistant/home-assistant",
 	},
-	"helmrelease-version": {
-		# The chart version floats; #413 pins it to the deployed
-		# 10.5.15.
-		"HelmRelease grafana/grafana",
-	},
 }
