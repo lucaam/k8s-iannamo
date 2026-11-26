@@ -90,6 +90,13 @@ spec:
                 repository: docker.io/valkey/valkey
                 tag: 9.2-alpine@sha256:cdcb7b1c7b6f1c9cb9442c71ac6275e78184657448407b2c1fdde7ee8024f4fb
                 pullPolicy: IfNotPresent
+              # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 96Mi
+                limits:
+                  memory: 256Mi
       persistence:
         data:
           enabled: true
@@ -120,7 +127,7 @@ spec:
 
       controllers:
         main:
-          # FIX: il nodeSelector va qui (controllers.main.pod), non in server.pod
+          # FIX: the nodeSelector goes here (controllers.main.pod), not in server.pod
           pod:
             nodeSelector:
               kubernetes.io/hostname: talos-homelab-worker-1
@@ -132,10 +139,22 @@ spec:
                 pullPolicy: IfNotPresent
               securityContext:
                 privileged: true
+              # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+              # The memory request is below p95 so that worker-1, where the pod is pinned, is not overcommitted.
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 1536Mi
+                limits:
+                  memory: 4608Mi
     machine-learning:
       enabled: true
       controllers:
         main:
+          # Machine learning can wait: it never preempts other pods
+          # (see infrastructure/priority-classes).
+          pod:
+            priorityClassName: homelab-low
           containers:
             main:
               image:
@@ -147,6 +166,13 @@ spec:
                 HF_XET_CACHE: /cache/huggingface-xet
                 MPLCONFIGDIR: /cache/matplotlib-config
                 MACHINE_LEARNING_MODEL_REVISION: v2
+              # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 1Gi
+                limits:
+                  memory: 3Gi
       persistence:
         cache:
           enabled: true

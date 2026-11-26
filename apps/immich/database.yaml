@@ -9,6 +9,16 @@ spec:
   imageName: tensorchord/cloudnative-vectorchord:17-0.4.3
   instances: 2
   primaryUpdateStrategy: unsupervised
+  # Every Immich request goes to the database (see infrastructure/priority-classes).
+  priorityClassName: homelab-critical
+  # 30-day usage per instance: memory p95 310Mi, p99 346Mi, max 468Mi; CPU p95
+  # 5m, max 596m. No CPU limit on purpose: bursty queries must not be throttled.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 384Mi
+    limits:
+      memory: 1Gi
   bootstrap:
     initdb:
       database: immich
@@ -23,9 +33,9 @@ spec:
       - name: immich
         passwordSecret:
           name: immich-db-secret
-        # If the user needs superuser privileges, uncomment the following line
+        # Superuser, because Immich creates the vchord and earthdistance
+        # extensions (see postInitApplicationSQL above).
         superuser: true
-        # Otherwise, for a regular user with login privileges, use:
         login: true
   postgresql:
     shared_preload_libraries:
