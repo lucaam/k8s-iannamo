@@ -10,6 +10,9 @@ resources:
 # child kustomizations; the name below is ignored because a target is set.
 # commonAnnotations is not used on purpose: it would also change the pod
 # template of the CNPG operator Deployment and restart it.
+# The same patch turns off postBuild substitution: CRDs never use ${VAR}, and
+# their descriptions can contain text such as "${...}" that Flux fails to parse,
+# which would stop the whole infrastructure Kustomization (CNPG 1.30 does).
 patches:
   - target:
       group: apiextensions.k8s.io
@@ -21,3 +24,4 @@ patches:
         name: any
         annotations:
           kustomize.toolkit.fluxcd.io/prune: disabled
+          kustomize.toolkit.fluxcd.io/substitute: disabled
