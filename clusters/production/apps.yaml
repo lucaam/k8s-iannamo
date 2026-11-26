@@ -7,12 +7,15 @@ spec:
   interval: 10m
   path: ./apps
   prune: true
+  # Deleting this Kustomization object (e.g. removing this file) keeps every
+  # object it applied; prune still removes objects that are deleted from Git.
+  deletionPolicy: Orphan
   sourceRef:
     kind: GitRepository
     name: flux-system
     namespace: flux-system
   dependsOn:
-    - name: infrastructure  # Aspetta NFS CSI pronto
+    - name: infrastructure  # Wait for NFS CSI to be ready
   decryption:
     provider: sops
     secretRef:
