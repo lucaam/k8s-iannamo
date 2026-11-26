@@ -86,8 +86,16 @@ spec:
             namespace: traefik
 
     # --- GATEWAY ---
+    # The Gateway traefik-gateway is defined in gateway.yaml (web and websecure
+    # listeners) and applied by Flux, but the chart also renders one with the
+    # same name and only the web listener. Step 1 of 2: keep the chart's copy
+    # on a Helm uninstall or removal, so that the next step
+    # (gateway.enabled: false) hands the object over to Flux instead of
+    # deleting it.
     gateway:
       namespacePolicy: All
+      annotations:
+        helm.sh/resource-policy: keep
 
     # --- SERVICE ---
     service:
