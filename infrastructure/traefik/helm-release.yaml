@@ -87,15 +87,11 @@ spec:
 
     # --- GATEWAY ---
     # The Gateway traefik-gateway is defined in gateway.yaml (web and websecure
-    # listeners) and applied by Flux, but the chart also renders one with the
-    # same name and only the web listener. Step 1 of 2: keep the chart's copy
-    # on a Helm uninstall or removal, so that the next step
-    # (gateway.enabled: false) hands the object over to Flux instead of
-    # deleting it.
+    # listeners) and applied by Flux only. The chart's own copy is off: it
+    # carried helm.sh/resource-policy: keep, so Helm left the object in place
+    # when it dropped it from the release.
     gateway:
-      namespacePolicy: All
-      annotations:
-        helm.sh/resource-policy: keep
+      enabled: false
 
     # --- SERVICE ---
     service:

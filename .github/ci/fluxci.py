@@ -1248,6 +1248,22 @@ def render_hr(hid: str, hr: dict, build: Build, cache: ChartCache, apis: list[st
                         "release": release, "namespace": namespace}
 
 
+def find_overlaps(owners: dict[Ident, str], rendered: dict[str, list[dict]]) -> list[str]:
+    """Objects that both a Flux Kustomization and a HelmRelease apply.
+
+    Two writers overwrite each other: a Helm upgrade, rollback or uninstall can
+    replace or delete what Flux applied, until Flux reconciles again.
+    """
+    out = []
+    for hid, docs in sorted(rendered.items()):
+        for d in docs:
+            i = ident(d)
+            if i in owners:
+                out.append(f"{ident_str(i)} is applied both by Kustomization {owners[i]} and by HelmRelease "
+                           f"{hid}: the two writers overwrite each other; keep a single source")
+    return out
+
+
 def cmd_render(args: argparse.Namespace) -> int:
     build = Build(args.build)
     plan = json.loads(Path(args.plan).read_text())
@@ -1260,6 +1276,7 @@ def cmd_render(args: argparse.Namespace) -> int:
     targets = plan["selected"] + (plan["removed"] if args.side == "base" else [])
     allowed = set((build.cfg.get("render") or {}).get("allowFailure") or [])
     results = {}
+    rendered: dict[str, list[dict]] = {}
     for hid in targets:
         if hid not in hrs:
             continue
@@ -1274,11 +1291,14 @@ def cmd_render(args: argparse.Namespace) -> int:
                 report.warning(msg + (" (listed in render.allowFailure)" if hid in allowed else ""))
             continue
         (out / f"{file_key(hid)}.yaml").write_text(dump_docs(docs))
+        rendered[hid] = docs
         if crds:
             (out / "crds" / f"{file_key(hid)}.yaml").write_text(dump_docs(crds))
         results[hid] = {"status": "ok", "objects": len(docs), **info}
         print(f"rendered {hid}: {info['chart']} {info['version']}, {len(docs)} objects")
     (out / "render.json").write_text(json.dumps(results, indent=2, sort_keys=True))
+    for msg in find_overlaps(build.owners(), rendered):
+        report.error(msg)
     return report.finish(lenient=args.side == "base")
 
 
