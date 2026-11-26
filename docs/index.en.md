@@ -1,44 +1,82 @@
 # k8s-iannamo
 
-Bare-metal Kubernetes cluster for homelab, fully managed via **GitOps**.
+GitOps repository of a homelab Kubernetes cluster. Three Talos Linux virtual
+machines run on one Proxmox VE host, and Flux keeps the cluster in line with
+the `main` branch of [lucaam/k8s-iannamo](https://github.com/lucaam/k8s-iannamo).
+This site explains how the cluster is built and how to change it safely.
 
-## Stack overview
+## At a glance
 
 | Layer | Technology |
-|-------|------------|
-| OS | Talos Linux v1.11 |
-| Orchestrator | Kubernetes v1.31 |
-| GitOps | Flux CD v2 |
-| Ingress | Traefik v3 + Gateway API |
-| Load Balancer | MetalLB (L2) |
-| Storage | NFS-CSI → ZFS on Proxmox |
-| Certificates | cert-manager + Let's Encrypt (Cloudflare DNS-01) |
-| Auth | Authentik (OIDC/SSO) |
-| Monitoring | Prometheus + Grafana + Gatus |
-| Alerting | Alertmanager + Flux Notifications → Telegram |
-| Secret | SOPS + age |
+|---|---|
+| Hypervisor | Proxmox VE on one host, with the ZFS pools `flash` (SSD) and `spacex` (HDD) |
+| Operating system | Talos Linux v1.11 |
+| Kubernetes | v1.31: one control plane node and two workers |
+| GitOps | Flux v2.8; secrets encrypted with SOPS and age |
+| Load balancing | MetalLB in layer 2 mode |
+| Ingress | Traefik v3 with the Gateway API |
+| Certificates | cert-manager: Let's Encrypt wildcard certificate, Cloudflare DNS-01 |
+| Identity | Authentik: OIDC and forward authentication |
+| Storage | NFS CSI driver backed by the Proxmox host, `Retain` reclaim policy |
+| Databases | CloudNativePG for Immich, a bundled PostgreSQL for Authentik |
+| Monitoring | kube-prometheus-stack, Grafana, Gatus |
+| Alerting | Alertmanager, Gatus and Flux, all to Telegram |
+| Automation | GitHub Actions pull request gate (`ci-gate`), Renovate |
 
-## Nodes
+## Where to start
 
-| Role | Hostname | IP |
-|------|----------|-----|
-| Control Plane | talos-homelab-cp-1 | 192.168.178.50 |
-| Worker | talos-homelab-worker-1 | 192.168.178.51 |
-| Worker | talos-homelab-worker-2 | 192.168.178.52 |
+<div class="grid cards" markdown>
 
-All nodes run as VMs on Proxmox (host: `192.168.178.162`).
+-   :material-sitemap-outline:{ .lg .middle } **[Architecture](architecture.md)**
 
-## Features
+    ---
 
-- **Declarative deployment**: every change to the `main` branch is automatically applied to the cluster by Flux
-- **Service high availability**: Traefik with 2 replicas, proactive alerting
-- **Telegram notifications**: Prometheus alerts (cluster metrics) + Flux alerts (GitOps errors)
-- **Centralized SSO**: all web services protected by Authentik OIDC
-- **ZFS data backup**: separate SSD (flash) and HDD (spacex) pools with Retain policy
+    Proxmox, Talos, the three nodes and how Flux applies this repository.
 
-## What it does NOT do
+-   :material-apps:{ .lg .middle } **[Applications](apps.md)**
 
-- Not a multi-tenant / production-grade cluster
-- No off-site backup management (only local NFS/ZFS persistence)
-- No auto-scaling (fixed nodes on Proxmox)
-- No public internet exposure without tunnel/proxy (local network only)
+    ---
+
+    What runs in the cluster, where it is reachable and how users log in.
+
+-   :material-server-network:{ .lg .middle } **[Platform](infrastructure.md)**
+
+    ---
+
+    MetalLB, Traefik, cert-manager, storage, security and monitoring.
+
+-   :material-source-pull:{ .lg .middle } **[Change workflow](workflow.md)**
+
+    ---
+
+    Branch, pull request, CI gate, merge, reconciliation and Renovate.
+
+</div>
+
+## Ground rules
+
+- **Git is the source of truth.** Flux applies what is on `main`, and `main`
+  only accepts squash merges of pull requests with a green `ci-gate`. A change
+  made by hand drifts from Git and is overwritten by the next reconciliation
+  or upgrade. See [Change workflow](workflow.md).
+- **Data is never deleted automatically.** Volumes use the `Retain` reclaim
+  policy, PVCs and the other stateful objects are protected from Flux pruning,
+  and the CI data guard stops pull requests that remove them. Apps are retired
+  with [a runbook](retiring-an-app.md), never by deleting their directory.
+- **Secrets are committed only encrypted.** Secrets are SOPS files encrypted
+  with age, and the domain name is the `${DOMAIN}` variable, filled in by Flux.
+  See [Security and secrets](security.md).
+
+!!! danger "There are no backups"
+    Everything, from the photo library to the databases and the Home Assistant
+    configuration, exists only on the ZFS pools of the single Proxmox host.
+    ZFS redundancy covers a failed disk and `Retain` covers a deleted PVC;
+    nothing covers a wrong `rm`, a lost pool or a lost host. See
+    [Storage](storage.md#backups).
+
+## Limits
+
+- **No high availability.** There is one physical host and one control plane
+  node with a single etcd member: when either is down, the cluster is down.
+- **Fixed capacity.** Three VMs of fixed size, no autoscaling.
+- **One owner.** It is a homelab, not a multi-tenant or production cluster.

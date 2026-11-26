@@ -3,81 +3,174 @@
 ## Overview
 
 ```mermaid
-graph TB
-    subgraph Proxmox["Proxmox Host (192.168.178.162)"]
-        subgraph Cluster["Kubernetes Cluster"]
-            CP[Control Plane<br/>192.168.178.50]
-            W1[Worker 1<br/>192.168.178.51]
-            W2[Worker 2<br/>192.168.178.52]
+flowchart TB
+    github[("GitHub<br/>lucaam/k8s-iannamo")]
+    lan(["LAN clients"])
+    subgraph host["Proxmox VE host"]
+        subgraph cluster["Kubernetes on Talos Linux"]
+            cp["cp-1<br/>control plane, etcd"]
+            w1["worker-1<br/>Intel iGPU"]
+            w2["worker-2<br/>Zigbee USB adapter"]
+            cp ~~~ w1 ~~~ w2
         end
-        ZFS[(ZFS Pools<br/>flash / spacex)]
+        nfs["NFS server"]
+        flash[("ZFS pool flash<br/>SSD")]
+        spacex[("ZFS pool spacex<br/>HDD")]
+        nfs --- flash
+        nfs --- spacex
     end
-
-    Internet((Internet)) -->|Cloudflare DNS| Traefik
-    Traefik -->|Gateway API| Apps
-
-    subgraph Apps["Applications"]
-        HA[Home Assistant]
-        Immich[Immich]
-        Grafana[Grafana]
-        More[...]
-    end
-
-    Cluster -->|NFS-CSI| ZFS
-    Flux[Flux CD] -->|GitOps| Cluster
-    GitHub[GitHub Repo] -->|Pull| Flux
+    github -->|"Flux pulls main"| cluster
+    lan -->|"MetalLB IPs"| cluster
+    cluster -->|"NFS CSI volumes"| nfs
 ```
 
-## GitOps Flow
+Everything runs on a single Proxmox VE host: the three Kubernetes nodes are
+virtual machines, and the same host serves the ZFS pools over NFS for the
+persistent volumes. Its node-exporter and ZFS exporter are scraped by
+Prometheus.
+
+## Nodes
+
+| Node | Role | vCPU | RAM | Passed-through device |
+|---|---|---|---|---|
+| `talos-homelab-cp-1` | control plane | 4 | 4 GiB | – |
+| `talos-homelab-worker-1` | worker | 4 | 12 GiB | Intel iGPU |
+| `talos-homelab-worker-2` | worker | 4 | 12 GiB | USB Zigbee adapter |
+
+- The control plane node is the only etcd member and runs only system pods
+  (control-plane taint).
+- On `talos-homelab-worker-1`, Immich uses the iGPU (`/dev/dri`) for
+  transcoding. The Talos image of this node adds the `i915` and `intel-ucode`
+  extensions.
+- On `talos-homelab-worker-2`, the Zigbee adapter is `/dev/ttyUSB0`, used by
+  Zigbee2MQTT.
+
+The VM disks are files on the `flash` pool, the same SSDs that back the
+`nfs-flash` volumes. Heavy writes to those volumes slow down etcd, and slow
+etcd writes make the controller manager and the scheduler lose their leader
+election and restart.
+
+## Software layers
+
+- **Talos Linux** is an immutable operating system driven by an API: no SSH,
+  no package manager, the whole node configuration is a machine config applied
+  with `talosctl`. The VMs and the Talos machine configs are managed with
+  Terraform in a separate, private repository; this repository starts at the
+  Kubernetes layer.
+- **Kubernetes** keeps the Talos defaults: flannel as CNI, kube-proxy, and
+  CoreDNS, whose configuration this repository overrides (see
+  [Networking](networking.md#dns)).
+- **Flux** reconciles this repository into the cluster.
+
+## GitOps with Flux { #gitops-with-flux }
+
+```mermaid
+flowchart LR
+    src["GitRepository flux-system<br/>branch main, every minute"]
+    root["Kustomization flux-system<br/>clusters/production"]
+    sec["Kustomization secrets<br/>infrastructure/secrets"]
+    infra["Kustomization infrastructure<br/>infrastructure"]
+    apps["Kustomization apps<br/>apps"]
+    src --> root
+    root --> sec & infra & apps
+    sec -.->|before| infra
+    infra -.->|before| apps
+```
+
+The GitRepository `flux-system` fetches `main` every minute. The Kustomization
+`flux-system` applies `clusters/production`, which defines the three
+Kustomizations that apply the rest of the repository:
+
+| Kustomization | Path | Depends on | Prune | SOPS decryption | postBuild variables from |
+|---|---|---|---|---|---|
+| `secrets` | `infrastructure/secrets` | – | no | yes | – |
+| `infrastructure` | `infrastructure` | `flux-system`, `secrets` | yes | yes | `cluster-vars`, `telegram-credentials` |
+| `apps` | `apps` | `infrastructure` | yes | yes | `cluster-vars`, `telegram-credentials` |
+
+- All three reconcile every 10 minutes and set `deletionPolicy: Orphan`:
+  deleting one of these Kustomization objects leaves what it applied in the
+  cluster.
+- With prune enabled, Flux deletes the objects that disappear from Git, except
+  the ones annotated `kustomize.toolkit.fluxcd.io/prune: disabled`: PVCs,
+  namespaces of stateful apps, CloudNativePG clusters and CRDs. See
+  [Storage](storage.md#data-protection).
+- `dependsOn` only orders the applies. A Kustomization is ready as soon as its
+  objects are applied: none of them uses `wait` or health checks, so `apps`
+  does not wait for the HelmReleases of `infrastructure` to be healthy.
+- Each Kustomization is applied as one set, after a server-side dry run: a
+  single invalid object stops the whole Kustomization.
+- `infrastructure` and `apps` substitute `${DOMAIN}` and
+  `${TELEGRAM_BOT_TOKEN}` from the two Secrets applied by `secrets`. See
+  [Security and secrets](security.md#postbuild-variables).
+
+!!! warning "Flux itself is not managed from Git"
+    `clusters/production/kustomization.yaml` does not include `flux-system/`,
+    so Flux never applies `gotk-components.yaml` and `gotk-sync.yaml`. The
+    controllers in the cluster (Flux v2.8) were installed with the `flux` CLI.
+    The `gotk-components.yaml` in Git is newer (v2.10) and has no effect, and
+    Renovate ignores the directory. Flux 2.8 already expects Kubernetes 1.33
+    or later (`flux check` reports the mismatch), so self-management waits for
+    the Kubernetes upgrade.
+
+Two Secrets were created outside Git when the cluster was bootstrapped, and
+this repository does not contain them:
+
+- `flux-system/flux-system`: the credentials the GitRepository uses to fetch
+  this repository;
+- `flux-system/sops-age`: the age private key (`age.agekey`) that decrypts the
+  SOPS files.
+
+Rebuilding the cluster from this repository alone has never been tested.
+Besides Flux and those two Secrets, the CRDs of Traefik and of the Prometheus
+Operator are not in Git: both HelmReleases skip CRDs, and the CRDs in the
+cluster come from earlier installs.
+
+## From commit to cluster
 
 ```mermaid
 sequenceDiagram
-    participant Dev as Developer
+    autonumber
+    participant A as Author
     participant GH as GitHub
-    participant Flux as Flux CD
-    participant K8s as Cluster
-
-    Dev->>GH: git push (main)
-    Flux->>GH: Poll every 1m
-    Flux->>K8s: Apply Kustomization
-    K8s-->>Flux: Status (Ready/Failed)
-    alt Error
-        Flux->>Telegram: Error alert
+    participant CI as CI gate
+    participant F as Flux
+    participant K as Cluster
+    participant T as Telegram
+    A->>GH: push a branch, open a pull request
+    GH->>CI: run ci.yaml
+    CI-->>GH: ci-gate result and diff comment
+    A->>GH: squash merge into main
+    F->>GH: fetch main (every minute)
+    F->>K: apply Kustomizations, upgrade HelmReleases
+    alt reconciliation fails
+        F->>T: error notification
     end
 ```
 
-## Repository Structure
+The details of each step are in [Change workflow](workflow.md).
 
+## Repository layout
+
+```text
+clusters/production/       Flux entry point
+├── flux-system/           Flux install manifests (not applied from Git, see above)
+├── secrets.yaml           Kustomization "secrets"
+├── infrastructure.yaml    Kustomization "infrastructure"
+└── apps.yaml              Kustomization "apps"
+infrastructure/            platform components, see Infrastructure
+├── crds/                  Gateway API CRDs, CloudNativePG operator and CRDs
+├── priority-classes/      homelab PriorityClasses
+├── metallb/               load balancer and address pool
+├── cert-manager/          ClusterIssuer and wildcard certificate
+├── nfs-csi/               NFS CSI driver and StorageClasses
+├── traefik/               Traefik, Gateway, middlewares, error pages
+├── kube-system/           CoreDNS configuration
+├── notifications/         Flux alerts to Telegram
+└── secrets/               SOPS Secrets for postBuild substitution
+apps/                      one directory per application, see Applications
+policy/                    conftest policies used by CI
+hack/                      read-only helper scripts
+.github/                   CI workflows, fluxci, Renovate configuration
+docs/, mkdocs.yml          this site
+mise.toml                  tool versions for CI and local runs
 ```
-├── clusters/production/     # Flux entry point: defines Kustomizations
-│   ├── secrets.yaml         # Kustomization for SOPS secrets
-│   ├── infrastructure.yaml  # Kustomization for infrastructure
-│   └── apps.yaml            # Kustomization for applications
-├── infrastructure/          # Platform components
-│   ├── crds/                # Gateway API CRDs
-│   ├── metallb/             # L2 load balancer
-│   ├── cert-manager/        # TLS wildcard certificates
-│   ├── nfs-csi/             # NFS storage driver
-│   ├── traefik/             # Ingress controller + Gateway
-│   ├── kube-system/         # System patch (metrics-server, etc.)
-│   └── notifications/       # Flux → Telegram alert
-├── apps/                    # User applications
-│   ├── authentik/           # SSO / Identity Provider
-│   ├── home-assistant/      # Home automation
-│   ├── immich/              # Photo management
-│   ├── grafana/             # Metrics dashboard
-│   ├── prometheus/          # Monitoring stack
-│   ├── gatus/               # Uptime monitoring
-│   └── ...                  # Other apps
-└── scripts/                 # Diagnostic scripts
-```
-
-## Kustomization Dependencies
-
-```mermaid
-graph LR
-    secrets[secrets] --> infrastructure
-    infrastructure --> apps
-```
-
-Flux applies resources in order: `secrets` → `infrastructure` → `apps`. Each level depends on the previous one via `dependsOn`.
