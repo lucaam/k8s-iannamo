@@ -67,6 +67,29 @@ spec:
         # "alertmanager-config" (chiave: alertmanager.yaml).
         configSecret: alertmanager-config
 
+        # Dead man's switch: prepared, NOT enabled.
+        # Watchdog fires all the time and the secret routes it to the "null"
+        # receiver, so nothing notices when Prometheus, Alertmanager or the
+        # whole cluster stop. To enable it, create an external check first
+        # (for example on healthchecks.io: period 1 minute, grace 10 minutes,
+        # notifications to Telegram or e-mail), then edit
+        # secret-alertmanager-config.sops.yaml with sops and, inside
+        # alertmanager.yaml:
+        # 1. add this route as the first entry of route.routes (the existing
+        #    "null" route still catches InfoInhibitor):
+        #      - receiver: heartbeat
+        #        matchers:
+        #          - alertname="Watchdog"
+        #        group_wait: 0s
+        #        group_interval: 1m
+        #        repeat_interval: 1m
+        # 2. add the receiver; the ping URL is a credential, so it only goes
+        #    into the encrypted secret, never in this file:
+        #      - name: heartbeat
+        #        webhook_configs:
+        #          - url: "https://hc-ping.com/<CHECK-UUID>"
+        #            send_resolved: false
+
         retention: 168h  # 7 giorni di storia notifiche
         storage:
           volumeClaimTemplate:
