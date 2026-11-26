@@ -9,6 +9,9 @@ spec:
   chart:
     spec:
       chart: ./charts/trek
+      # Defaults to spec.interval (5m). A new GitRepository artifact requeues
+      # the HelmChart anyway, so hourly is enough.
+      interval: 1h
       sourceRef:
         kind: GitRepository
         name: trek
@@ -18,7 +21,16 @@ spec:
     image:
       repository: mauriceboe/trek
       tag: 5.1.4@sha256:991ff5aa53244b25d5a8ea40361dc286cfc8211638044eabe12b9926729db5cc
-      pullPolicy: Always
+      pullPolicy: IfNotPresent
+
+    resources:
+      requests:
+        cpu: 20m
+        memory: 448Mi
+      limits:
+        # null removes the chart's default 500m CPU limit, which throttled trek.
+        cpu: null
+        memory: 768Mi
 
     service:
       type: ClusterIP
@@ -36,10 +48,10 @@ spec:
       OIDC_ISSUER: "https://auth.${DOMAIN}"
       OIDC_ADMIN_CLAIM: "trip admins"
       OIDC_DISCOVERY_URL: "https://auth.${DOMAIN}/application/o/trek/.well-known/openid-configuration"
-      # OIDC_CLIENT_SECRET NON va qui: va nel Secret referenziato da existingSecret sotto
+      # OIDC_CLIENT_SECRET does not go here: it comes from the Secret set in existingSecret below
 
     existingSecret: trek-secret
-    existingSecretKey: JWT_SECRET   # vedi nota sotto
+    existingSecretKey: JWT_SECRET   # key of trek-secret the chart reads ENCRYPTION_KEY from
 
     persistence:
       enabled: true

@@ -7,4 +7,9 @@ spec:
   interval: 1h
   url: https://github.com/liketrek/TREK
   ref:
-    branch: main
+    # A release tag, not main: chart updates arrive as Renovate PRs.
+    tag: v5.2.1
+  # Only the chart goes into the artifact: the full upstream tree is ~195 MB,
+  # and source-controller untars the artifact on every HelmChart reconcile.
+  sparseCheckout:
+    - charts/trek
