@@ -36,6 +36,14 @@ spec:
 
     externalConfigMap: gatus
 
+    # 30-day working set: p95 37Mi, max 46Mi; CPU p95 2m, max 9m.
+    resources:
+      requests:
+        cpu: 10m
+        memory: 48Mi
+      limits:
+        memory: 128Mi
+
     # OIDC and Telegram values come as env vars from the gatus-secrets secret
     # (SOPS): the ConfigMap keeps only the env placeholders (written with a
     # double dollar sign to skip Flux postBuild) and Gatus expands them when it

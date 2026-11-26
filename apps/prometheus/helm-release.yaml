@@ -55,7 +55,16 @@ spec:
                 requests:
                   storage: 20Gi
 
-        # Lasciamo headroom prima di kill OOM
+        # 30-day working set: p95 734Mi, max 1514Mi; CPU p95 28m, max 497m.
+        # Request near p95/p99, memory limit about 2x the max to leave room
+        # for WAL replay after a restart, no CPU limit.
+        resources:
+          requests:
+            cpu: 50m
+            memory: 1Gi
+          limits:
+            memory: 3Gi
+
     # ----------------------------------------------------------------
     # Alertmanager — config completa nel Secret SOPS "alertmanager-config"
     # (contiene bot_token, chat_id, routing — tutto cifrato)
@@ -99,6 +108,15 @@ spec:
               resources:
                 requests:
                   storage: 2Gi
+
+        # 30-day working set: p95 42Mi, max 44Mi; CPU p95 0m, max 15m.
+        # Replaces the operator default (memory request 200Mi only).
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
 
     # ----------------------------------------------------------------
     # Componenti accessori
