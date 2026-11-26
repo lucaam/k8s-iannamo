@@ -17,6 +17,14 @@ spec:
   postRenderers:
     - kustomize:
         patches:
+          # The chart has no value for the priority class.
+          - target:
+              kind: StatefulSet
+              name: home-assistant-matter-server
+            patch: |
+              - op: add
+                path: /spec/template/spec/priorityClassName
+                value: homelab-critical
           - target:
               kind: Service
               name: home-assistant-matter-server

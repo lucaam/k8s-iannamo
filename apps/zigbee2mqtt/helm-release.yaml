@@ -48,8 +48,8 @@ spec:
         # -- the name for the kubernets secret to mount as secret.yaml. This can be referenced in the config
         # by using advanced configurations https://www.zigbee2mqtt.io/guide/configuration/frontend.html#advanced-configuration
         name: "mqtt-auth"
-      # -- name of pod priority class
-      priorityClassName: ""
+      # -- name of pod priority class (see infrastructure/priority-classes)
+      priorityClassName: homelab-critical
       # -- pod dns policy
       dnsPolicy: ClusterFirst
       # -- CPU/Memory configuration for the pods
