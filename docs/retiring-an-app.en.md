@@ -2,10 +2,11 @@
 
 Nothing in this cluster deletes data on its own. Every StorageClass has
 `reclaimPolicy: Retain`, and PVCs, stateful namespaces, CNPG clusters and CRDs
-carry `kustomize.toolkit.fluxcd.io/prune: disabled`. A mistake in Git cannot
-destroy data. The price is that data stays forever unless someone removes it
-on purpose. This page is that purpose: how to retire an app without leaving
-data behind for years, and without deleting anything by accident.
+carry `kustomize.toolkit.fluxcd.io/prune: disabled` (see
+[Storage](storage.md#data-protection)). A mistake in Git cannot destroy data.
+The price is that data stays forever unless someone removes it on purpose.
+This page is that purpose: how to retire an app without leaving data behind
+for years, and without deleting anything by accident.
 
 ## Lifecycle
 
@@ -36,7 +37,9 @@ Before an app is removed from Git, make sure that removing it keeps its data:
   clusters (`cnpg.io/hibernation: "on"`), so that nothing writes while the
   app waits for its deletion.
 
-Example: #415 parked TeslaMate.
+Example: [#415](https://github.com/lucaam/k8s-iannamo/pull/415) parked
+TeslaMate, and [#431](https://github.com/lucaam/k8s-iannamo/pull/431) then
+removed it from Git with its retention entry (steps 2 and 3).
 
 ## 2. Remove from Git and 3. retain
 
@@ -80,43 +83,44 @@ undone.
 
 1. **Find out what is safe to delete.** Run the read-only inventory:
 
-   ```bash
-   hack/inventory-released-pvs.py > /tmp/released-pvs.md
-   ```
+    ```bash
+    hack/inventory-released-pvs.py > /tmp/released-pvs.md
+    ```
 
-   It lists every PV that is not Bound:
-   - An **alias** shares its directory with a live PV. Most Released PVs are
-     aliases, because a PVC recreated with the same name maps to the same
-     `<namespace>/<pvc>` directory. **Never delete an alias directory.**
-   - An **orphan** has a directory that no live PV uses. It is shown with its
-     size and last modification date.
+    It lists every PV that is not Bound:
+
+    - An **alias** shares its directory with a live PV. Most Released PVs are
+      aliases, because a PVC recreated with the same name maps to the same
+      `<namespace>/<pvc>` directory. **Never delete an alias directory.**
+    - An **orphan** has a directory that no live PV uses. It is shown with its
+      size and last modification date.
 
 2. **Kubernetes objects.** CNPG deletes the PVCs it owns together with its
    `Cluster`. With `Retain`, their PVs become Released and the files stay.
 
-   ```bash
-   kubectl -n <ns> delete cluster.postgresql.cnpg.io <cluster>
-   kubectl -n <ns> delete pvc <pvc>...
-   kubectl delete namespace <ns>
-   ```
+    ```bash
+    kubectl -n <ns> delete cluster.postgresql.cnpg.io <cluster>
+    kubectl -n <ns> delete pvc <pvc>...
+    kubectl delete namespace <ns>
+    ```
 
 3. **PV objects.** Deleting a Released PV with `Retain` never touches its
    directory, so this is also how to tidy up aliases:
 
-   ```bash
-   kubectl delete pv <pv>...
-   ```
+    ```bash
+    kubectl delete pv <pv>...
+    ```
 
 4. **Directories on the NFS host.** This is the only step that frees disk
    space. Delete only directories that the inventory reports as **orphan**,
    and run the inventory again right before, in case a new PVC reused the
    path:
 
-   ```bash
-   ssh root@proxmox 'rm -rf /export/<pool>/<namespace>/<pvc>'
-   ```
+    ```bash
+    ssh root@proxmox 'rm -rf /export/<pool>/<namespace>/<pvc>'
+    ```
 
-   ZFS snapshots of the dataset, if any, keep the blocks until they expire.
+    ZFS snapshots of the dataset, if any, keep the blocks until they expire.
 
 5. **Registry.** Remove the entry from `.github/ci/retention.yaml` with a pull
    request.
