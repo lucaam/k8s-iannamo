@@ -34,28 +34,33 @@ spec:
                 value:
                   metallb.io/address-pool: external-pool
                   metallb.io/loadBalancerIPs: 192.168.178.14
+          # The chart hardcodes a privileged container that may escalate
+          # privileges. The server needs neither: it mounts no host devices
+          # (Bluetooth commissioning is off), and on the host network it only
+          # uses UDP sockets, mDNS multicast and /data, which root owns. So
+          # drop every capability and keep the rest of the chart's settings
+          # (root, read-only root filesystem, RuntimeDefault seccomp).
+          # The former patches targeted a Deployment, but the chart renders
+          # a StatefulSet, so they never applied.
           - target:
-              kind: Deployment
+              kind: StatefulSet
               name: home-assistant-matter-server
             patch: |
-              - op: add
-                path: /spec/template/spec/containers/0/securityContext
-                value:
-                  allowPrivilegeEscalation: false
-                  capabilities:
-                    drop:
-                      - ALL
-                  readOnlyRootFilesystem: false
-          - target:
-              kind: Deployment
-              name: home-assistant-matter-server
-            patch: |
-              - op: add
-                path: /spec/template/spec/securityContext
-                value:
-                  fsGroup: 1000
-                  runAsNonRoot: false
-                  runAsUser: 0
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: home-assistant-matter-server
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: home-assistant-matter-server
+                        securityContext:
+                          privileged: false
+                          allowPrivilegeEscalation: false
+                          capabilities:
+                            drop:
+                              - ALL
 
   values:
     image:
