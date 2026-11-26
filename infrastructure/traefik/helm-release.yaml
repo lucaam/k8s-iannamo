@@ -97,6 +97,8 @@ spec:
         metallb.io/loadBalancerIPs: 192.168.178.10
 
     # --- RESOURCES ---
+    # Every route goes through Traefik (see infrastructure/priority-classes).
+    priorityClassName: homelab-critical
     # 30-day working set: p95 and max 102Mi per pod; CPU p95 3m, max 36m.
     # No limits: Traefik serves every route, so it must not be throttled
     # or OOM-killed.
