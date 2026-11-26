@@ -26,6 +26,14 @@ spec:
       repository: ghcr.io/lucaam/social-media-reuploader
       tag: "0.8.1"
       pullPolicy: IfNotPresent
+    # Overrides the resources of the chart's resourceProfile (medium), which also sets a 1 CPU limit.
+    # No CPU limit on purpose: it throttled video processing.
+    resources:
+      requests:
+        cpu: 10m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
     service:
       type: ClusterIP
       port: 80
@@ -50,6 +58,14 @@ spec:
         tag: "0.8.1"
         pullPolicy: IfNotPresent
       port: 8081
+    # Merged with the chart defaults: cpu: null drops their 200m CPU limit.
+    guiResources:
+      requests:
+        cpu: 10m
+        memory: 80Mi
+      limits:
+        cpu: null
+        memory: 256Mi
     db:
       pvc:
         enabled: true
