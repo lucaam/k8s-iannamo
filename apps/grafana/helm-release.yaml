@@ -21,6 +21,18 @@ spec:
     persistence:
       enabled: true
       existingClaim: grafana-storage
+    # grafana.db is SQLite on the grafana-storage NFS volume: with the
+    # default RollingUpdate the new and the old pod use it at the same time
+    # during a rollout. Recreate runs one pod at a time, as for gatus.
+    deploymentStrategy:
+      type: Recreate
+    # 30-day working set: p95 127Mi, max 240Mi; CPU p95 3m, max 7m.
+    resources:
+      requests:
+        cpu: 10m
+        memory: 192Mi
+      limits:
+        memory: 512Mi
     # OIDC / Generic OAuth (Authentik) configuration
     grafana.ini:
       server:
