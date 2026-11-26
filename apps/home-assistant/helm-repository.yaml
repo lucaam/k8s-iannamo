@@ -1,4 +1,3 @@
-
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
@@ -6,4 +5,6 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1h
-  url: http://pajikos.github.io/home-assistant-helm-chart
+  # pajikos.github.io (http or https) redirects to this custom domain over
+  # plain http, so the https URL of the custom domain is used directly.
+  url: https://blog.pavelsklenar.com/home-assistant-helm-chart
