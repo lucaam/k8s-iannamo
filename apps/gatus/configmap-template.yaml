@@ -45,13 +45,20 @@ data:
       # ========================================
       # 🌐 SERVIZI PUBBLICI (HTTPS)
       # ========================================
+      # Hosts without a route get a real 404 from the Traefik catch-all
+      # (infrastructure/traefik/catch-all.yaml), so [STATUS] == 200 fails
+      # when a route disappears.
+      # Certificate threshold: cert-manager renews the wildcard certificate
+      # 30 days (720h) before expiry, so "> 720h" failed at every renewal;
+      # 336h (14 days, as CertManagerCertExpiringSoon) only fails if the
+      # renewal is stuck.
       - name: "Authentik SSO"
         group: "Public Services"
         url: "https://auth.${DOMAIN}"
         interval: 1m
         conditions:
           - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 3000"
         alerts:
           - type: telegram
@@ -62,7 +69,7 @@ data:
         interval: 1m
         conditions:
           - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 2000"
         alerts:
           - type: telegram
@@ -73,7 +80,7 @@ data:
         interval: 1m
         conditions:
           - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 3000"
         alerts:
           - type: telegram
@@ -84,7 +91,7 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 4000"
         alerts:
           - type: telegram

@@ -11,6 +11,7 @@ resources:
   - servicemonitor-node-exporter.yaml
   - node-exporter-service.yaml
   - node-exporter-endpoints.yaml
+  - servicemonitor-cert-manager.yaml
   - middleware-authentik.yaml
   - httproute-prometheus.yaml
   # Alerting rules

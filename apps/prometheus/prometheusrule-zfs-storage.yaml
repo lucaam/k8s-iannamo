@@ -8,9 +8,14 @@ metadata:
 spec:
   groups:
     # ------------------------------------------------------------------
-    # ZFS pools su Proxmox (host: 192.168.178.162, exporter :9134)
-    # Metriche: zfs_pool_health, zfs_pool_allocated_bytes,
-    #           zfs_pool_size_bytes, zfs_pool_*_errors
+    # ZFS pools on Proxmox (host: 192.168.178.162, zfs_exporter :9134)
+    # Metrics: zfs_pool_health, zfs_pool_allocated_bytes,
+    #          zfs_pool_size_bytes
+    # zfs_exporter 2.3.11 exposes no vdev error counters and no scrub
+    # timestamps, so ZfsPoolErrors (zfs_pool_*_errors_total) and
+    # ZfsScrubOverdue (zfs_pool_scrub_last_finish_seconds) were removed:
+    # they had 0 series and could never fire. Add them back together with a
+    # collector on the host that exports those metrics.
     # ------------------------------------------------------------------
     - name: zfs.proxmox
       rules:
@@ -33,18 +38,6 @@ spec:
             summary: "Pool ZFS {{ $labels.pool }} non in stato ONLINE"
             description: "Stato corrente: {{ $value }}. Controllare `zpool status` su Proxmox."
 
-        - alert: ZfsPoolErrors
-          expr: |
-            increase(zfs_pool_checksum_errors_total[10m]) > 0
-            or increase(zfs_pool_read_errors_total[10m]) > 0
-            or increase(zfs_pool_write_errors_total[10m]) > 0
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Errori I/O sul pool ZFS {{ $labels.pool }}"
-            description: "Rilevati errori CKSUM/READ/WRITE negli ultimi 10m. Disco in degrado?"
-
         - alert: ZfsPoolNearFull
           expr: (zfs_pool_allocated_bytes / zfs_pool_size_bytes) > 0.80
           for: 30m
@@ -62,16 +55,6 @@ spec:
           annotations:
             summary: "Pool ZFS {{ $labels.pool }} oltre il 90% — rischio imminente"
             description: "Uso attuale: {{ $value | humanizePercentage }}. ZFS degrada bruscamente sopra il 90%."
-
-        - alert: ZfsScrubOverdue
-          # nessuno scrub da oltre 35 giorni
-          expr: (time() - zfs_pool_scrub_last_finish_seconds) > 60 * 60 * 24 * 35
-          for: 1h
-          labels:
-            severity: warning
-          annotations:
-            summary: "Scrub ZFS in ritardo per il pool {{ $labels.pool }}"
-            description: "Ultimo scrub completato {{ $value | humanizeDuration }} fa. Esegui `zpool scrub {{ $labels.pool }}`."
 
     # ------------------------------------------------------------------
     # PVC riempimento (visto dal kubelet)
@@ -116,7 +99,10 @@ spec:
     - name: nfs.client
       rules:
         - alert: NfsTimeouts
-          expr: increase(node_nfs_requests_total{status="timeout"}[10m]) > 0
+          # node_nfs_requests_total has no status label, so the old selector
+          # {status="timeout"} matched 0 series. The NFS client retransmits an
+          # RPC each time a request times out: count the retransmissions.
+          expr: increase(node_nfs_rpc_retransmissions_total[10m]) > 0
           for: 10m
           labels:
             severity: critical
@@ -127,8 +113,10 @@ spec:
         - alert: NfsServerUnreachable
           # Tutti i nodi con NFS mount hanno traffico zero per 30m,
           # ma ne avevano nell'ultima ora — stallo globale
+          # sum() instead of count(... > 0) == 0: count() of an empty vector
+          # returns no sample rather than 0, so the old condition never matched.
           expr: |
-            count(rate(node_nfs_requests_total[5m]) > 0) == 0
+            sum(rate(node_nfs_requests_total[5m])) == 0
               and count(max_over_time(rate(node_nfs_requests_total[1h])[1h:5m]) > 0) > 0
           for: 30m
           labels:
