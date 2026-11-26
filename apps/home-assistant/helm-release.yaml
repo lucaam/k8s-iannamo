@@ -60,7 +60,7 @@ spec:
         cpu: 200m
         memory: 2560Mi
       limits:
-        memory: 5Gi
+        memory: 5376Mi  # 1.5x the 30-day max (3506Mi)
     hostPort:
       # Enable 'hostPort' or not
       enabled: false
