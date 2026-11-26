@@ -151,6 +151,10 @@ spec:
       enabled: true
       controllers:
         main:
+          # Machine learning can wait: it never preempts other pods
+          # (see infrastructure/priority-classes).
+          pod:
+            priorityClassName: homelab-low
           containers:
             main:
               image:
