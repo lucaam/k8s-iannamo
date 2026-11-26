@@ -1,13 +1,22 @@
+# yamllint configuration, used by CI (lint job in .github/workflows/ci.yaml)
+# and locally (`yamllint .`).
 extends: default
+
 ignore: |
-  .backup-*/
   charts/
+  clusters/production/flux-system/gotk-components.yaml
+  *.sops.yaml
+
 rules:
-  line-length:
-    max: 200
-    level: warning
-  comments-indentation: disable
   document-start: disable
+  # Long URLs and embedded configuration files.
+  line-length: disable
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
   truthy:
-    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    allowed-values: ["true", "false", "yes", "no", "on", "off"]
     check-keys: false
+  indentation:
+    spaces: consistent
+    indent-sequences: whatever
