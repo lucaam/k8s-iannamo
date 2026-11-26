@@ -1,0 +1,70 @@
+# Configuration of fluxci (.github/ci/fluxci.py). See .github/ci/README.md.
+
+# Root of the Flux graph. flux-system is bootstrapped in the cluster and is not
+# applied from Git, so CI starts from the same objects Flux reconciles first.
+bootstrap: clusters/production/flux-system/gotk-sync.yaml
+# The GitRepository that points at this repository (namespace/name).
+gitRepository: flux-system/flux-system
+
+# Cluster version, for helm --kube-version and kubeconform.
+kubernetesVersion: "1.31.4"
+# API versions and kinds served by the cluster, passed to helm --api-versions
+# as helm-controller does. How to refresh it: .github/ci/README.md.
+apiVersionsFile: .github/ci/api-versions.txt
+
+# CRDs for kubeconform schemas, in addition to those found in builds and renders.
+crdFiles:
+  - clusters/production/flux-system/gotk-components.yaml
+
+policyDir: policy
+
+kubeconform:
+  # Reject fields that a CRD does not define (the API server would drop them).
+  strictCRDs: true
+  extraSchemaLocations:
+    # datreeio/CRDs-catalog pinned to a commit: fallback for CRDs not in the repository.
+    - https://raw.githubusercontent.com/datreeio/CRDs-catalog/04af58d740718c4dc719441bf39fb284c784f4a8/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+  # apiVersion/Kind pairs that have no schema anywhere. Keep this list short.
+  allowMissingSchemas:
+    # Not published by yannh/kubernetes-json-schema; the CRDs themselves are
+    # parsed by fluxci to generate the schemas of their custom resources.
+    - apiextensions.k8s.io/v1/CustomResourceDefinition
+  # Validation errors that are known false positives, matched by kind and a
+  # substring of the message. Each entry needs a reason.
+  ignoreErrors:
+    # Kubernetes 1.31 accepts a StatefulSet without serviceName (kubectl explain
+    # shows it as optional, and zigbee2mqtt runs that way), but the published
+    # schema still lists it as required.
+    - kind: StatefulSet
+      message: "missing property 'serviceName'"
+
+# Plaintext Secrets are searched in every YAML file except these paths.
+secretScanIgnore:
+  - charts/
+  - .github/
+
+# YAML files under these paths are expected to be applied by a Flux Kustomization.
+orphanScan:
+  - apps/
+  - infrastructure/
+  - clusters/
+orphanIgnore:
+  - clusters/production/flux-system/
+
+# Objects in a Kustomization with prune: true should carry
+# kustomize.toolkit.fluxcd.io/prune: disabled, so that removing them from Git
+# does not delete their data. "warning" until every existing object is
+# annotated, then "error".
+pruneProtection:
+  level: warning
+  kinds:
+    - PersistentVolumeClaim
+    - postgresql.cnpg.io/Cluster
+
+render:
+  # HelmReleases whose render failure is reported as a warning instead of an
+  # error. Only for known, tracked breakages; remove the entry with the fix.
+  allowFailure:
+    # The teslamate chart source (oci://ghcr.io/dcardozoo/charts) returns 401
+    # since 2026-11-11; the app is being parked (#415) and then removed.
+    - teslamate/teslamate

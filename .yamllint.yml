@@ -1,13 +1,31 @@
+# yamllint configuration, used by CI (lint job in .github/workflows/ci.yaml)
+# and locally (`yamllint .`).
 extends: default
+
 ignore: |
-  .backup-*/
   charts/
+  clusters/production/flux-system/gotk-components.yaml
+  *.sops.yaml
+
 rules:
-  line-length:
-    max: 200
-    level: warning
-  comments-indentation: disable
   document-start: disable
+  # Long URLs and embedded configuration files.
+  line-length: disable
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
   truthy:
-    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    allowed-values: ["true", "false", "yes", "no", "on", "off"]
     check-keys: false
+  indentation:
+    spaces: consistent
+    indent-sequences: whatever
+  # Baseline: about 30 manifests have no final newline, a few start with a
+  # blank line or have trailing spaces. These rules are turned back on by the
+  # formatting PR that fixes those files, once the open PRs touching them land.
+  new-line-at-end-of-file: disable
+  trailing-spaces: disable
+  empty-lines:
+    max: 2
+    max-start: 1
+    max-end: 1

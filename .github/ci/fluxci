@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Run fluxci.py with the Python dependencies pinned in its header (PEP 723).
+exec uv run --quiet --script "$(dirname "${BASH_SOURCE[0]}")/fluxci.py" "$@"
