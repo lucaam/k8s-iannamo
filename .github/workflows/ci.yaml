@@ -68,9 +68,12 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
-        # Only the workflows that replaced the old ones; the rest are removed
-        # once ci-gate is the required check.
-        run: zizmor --format github .github/workflows/ci.yaml .github/workflows/ci-main.yaml .github/workflows/docs.yml
+        run: zizmor --format github .github/workflows/
+      - name: Dependency review
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: high
       - name: fluxci unit tests
         if: ${{ !cancelled() }}
         run: uv run --quiet --no-project --with pyyaml==6.0.3 python -m unittest discover -s .github/ci -p 'test_*.py'
