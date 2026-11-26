@@ -16,9 +16,10 @@ Renovate automerges only when `ci-gate` is green.
 ## Jobs of the pull request gate
 
 - **lint**: `yamllint --strict` on the whole repository (`.yamllint.yml`),
-  `actionlint`, `zizmor`, the fluxci unit tests, the Renovate config
-  validator when `.github/renovate.json` changes, `mkdocs build --strict`
-  when the docs change.
+  `actionlint`, `zizmor` on every workflow, GitHub's dependency review (new
+  actions with known vulnerabilities), the fluxci unit tests, the Renovate
+  config validator when `.github/renovate.json` changes, `mkdocs build
+  --strict` when the docs change.
 - **manifests**: `fluxci build` of every Flux Kustomization reachable from
   `clusters/production/flux-system/gotk-sync.yaml`, then `fluxci check`, then
   kubeconform and conftest on the result.
