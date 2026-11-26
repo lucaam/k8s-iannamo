@@ -450,7 +450,7 @@ spec:
       image:
         registry: docker.io
         repository: library/postgres
-        tag: "17.12-bookworm@sha256:40865bc877a289da75963d97d72b59633f639fc5af7a4e856bfa3714cae5b536"
+        tag: "17.12-bookworm@sha256:1eff563f6c868b9b433566e9f3cf6e5c79fbd3b95bf70ec7277d376cdbfc50d7"
       auth:
         database: "authentik"
         username: "authentik"
