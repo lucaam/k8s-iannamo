@@ -74,6 +74,9 @@ jobs:
         uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
         with:
           fail-on-severity: high
+      - name: Data retention registry
+        if: ${{ !cancelled() }}
+        run: uv run --quiet --script .github/ci/retention.py --check
       - name: fluxci unit tests
         if: ${{ !cancelled() }}
         run: uv run --quiet --no-project --with pyyaml==6.0.3 python -m unittest discover -s .github/ci -p 'test_*.py'

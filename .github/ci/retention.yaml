@@ -1,0 +1,17 @@
+# Data kept on purpose after an app was removed from Git.
+#
+# Nothing in the cluster deletes data on its own: StorageClasses are Retain
+# and Flux never prunes PVCs, namespaces or databases. So every retired app
+# gets an entry here with a date. Once retainUntil has passed, the nightly
+# ci-main run opens an issue labelled "data-retention", and the data is then
+# either deleted by hand (docs/retiring-an-app.en.md) or kept on purpose with
+# a new retainUntil. CI never deletes anything.
+#
+# Entry fields:
+#   app:          name of the retired app
+#   namespace:    namespace that still holds the data
+#   since:        date the app was removed from Git (YYYY-MM-DD)
+#   retainUntil:  date after which the data should be deleted (YYYY-MM-DD)
+#   reason:       why it was retired
+#   data:         what is kept: Kubernetes objects and host directories
+retained: []

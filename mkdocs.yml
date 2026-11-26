@@ -64,3 +64,4 @@ nav:
       - Security & Secrets: security.en.md
       - Monitoring & Alerting: monitoring.en.md
       - Operations: operations.en.md
+      - Retiring an app: retiring-an-app.en.md
