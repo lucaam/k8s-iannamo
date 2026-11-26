@@ -6,7 +6,7 @@ without access to the cluster.
 | Workflow | When | What |
 |---|---|---|
 | `ci.yaml` | every pull request | the gate: lint, Flux build, render of the changed HelmReleases, validation, data guard, diff comment |
-| `ci-main.yaml` | after every merge, every night, on demand | build and render of **every** HelmRelease (external chart sources included), validation, Trivy scan to code scanning; a failure opens or updates the issue labelled `ci-main`, a success closes it |
+| `ci-main.yaml` | after every merge, every night, on demand | build and render of **every** HelmRelease (external chart sources included), validation, Trivy scan to code scanning; a failure opens or updates the issue labelled `ci-main`, a success closes it. It also opens an issue labelled `data-retention` when retained data passes its date (`retention.yaml`, see `docs/retiring-an-app.en.md`) |
 | `docs.yml` | merge that touches the docs | builds and publishes the MkDocs site |
 
 The only required check besides GitGuardian is **`ci-gate`**, which fails if
