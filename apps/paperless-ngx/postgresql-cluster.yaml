@@ -3,11 +3,13 @@ kind: Cluster
 metadata:
   name: paperless-db
   namespace: paperless-ngx
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   instances: 2
   storage:
     size: 5Gi
-    storageClass: nfs-flash       # esplicito: nessuna SC di default nel cluster
+    storageClass: nfs-flash       # explicit: the cluster has no default StorageClass
   bootstrap:
     initdb:
       database: paperless
