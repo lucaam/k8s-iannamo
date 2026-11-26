@@ -56,6 +56,9 @@ would install:
   - YAML files that no Kustomization applies are reported as warnings;
   - PVCs and CNPG clusters without `kustomize.toolkit.fluxcd.io/prune: disabled`
     are reported (`pruneProtection` in `config.yaml`).
+- **One writer per object.** An object that both a Flux Kustomization and a
+  HelmRelease apply fails the render: a Helm upgrade, rollback or uninstall
+  would overwrite or delete what Flux applied.
 - **Render like helm-controller.** Release name and namespace, `valuesFrom`
   ConfigMaps, CRD policy, post-renderers and origin labels are applied as
   helm-controller does. `--kube-version` and `--api-versions` come from

@@ -104,6 +104,16 @@ class HelmTest(unittest.TestCase):
         self.assertEqual([fluxci.ns_of(d) for d in docs], ["release", "", "", "other"])
 
 
+class OverlapTest(unittest.TestCase):
+    def test_object_with_two_writers(self):
+        gw = doc("Gateway", "traefik-gateway", "traefik", group="gateway.networking.k8s.io")
+        owners = {fluxci.ident(gw): "flux-system/infrastructure"}
+        found = fluxci.find_overlaps(owners, {"traefik/traefik": [gw, doc("Service", "traefik", "traefik")]})
+        self.assertEqual(len(found), 1)
+        self.assertIn("HelmRelease traefik/traefik", found[0])
+        self.assertEqual(fluxci.find_overlaps(owners, {"traefik/traefik": [doc("Service", "traefik", "traefik")]}), [])
+
+
 class SchemaTest(unittest.TestCase):
     def test_conversion(self):
         js = fluxci.to_json_schema({"type": "object", "properties": {
