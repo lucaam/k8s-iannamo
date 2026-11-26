@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: immich-library
   namespace: immich
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany
@@ -16,6 +18,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: immich-machine-learning-cache
   namespace: immich
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany
@@ -30,6 +34,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: immich-valkey
   namespace: immich
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany

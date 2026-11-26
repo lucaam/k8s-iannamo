@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: trek-data
   namespace: trek
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany
@@ -16,6 +18,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: trek-uploads
   namespace: trek
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany

@@ -3,6 +3,8 @@ kind: Cluster
 metadata:
   name: immich-pg
   namespace: immich
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   imageName: tensorchord/cloudnative-vectorchord:17-0.4.3
   instances: 2
@@ -18,13 +20,13 @@ spec:
         - CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;
   managed:
     roles:
-    - name: immich
-      passwordSecret:
-        name: immich-db-secret
-      # Se l'utente deve avere privilegi di superuser, scommenta la riga seguente
-      superuser: true
-      # Altrimenti, se deve essere un utente normale con privilegi di login, usa:
-      login: true
+      - name: immich
+        passwordSecret:
+          name: immich-db-secret
+        # If the user needs superuser privileges, uncomment the following line
+        superuser: true
+        # Otherwise, for a regular user with login privileges, use:
+        login: true
   postgresql:
     shared_preload_libraries:
       - "vchord.so"
