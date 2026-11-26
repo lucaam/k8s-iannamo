@@ -1,0 +1,13 @@
+# Placeholder values for the postBuild variables that Flux reads from
+# SOPS-encrypted Secrets, which CI cannot decrypt. fluxci requires one
+# placeholder for each key of each Secret, and no others: a variable that the
+# cluster Secret does not define fails CI instead of becoming an empty string.
+secrets:
+  flux-system/cluster-vars:
+    DOMAIN: ci.example.com
+  flux-system/telegram-credentials:
+    TELEGRAM_BOT_TOKEN: "000000000:ci-placeholder-token"
+
+# ConfigMaps or Secrets referenced by substituteFrom that exist only in the
+# cluster (created outside Git), with placeholder values for their keys.
+external: {}

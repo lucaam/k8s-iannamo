@@ -1,7 +1,9 @@
 package main
 
-warn[msg] {
-  input.kind == "Namespace"
-  not input.metadata.labels["pod-security.kubernetes.io/enforce"]
-  msg := sprintf("Namespace %s manca label pod-security enforce", [input.metadata.name])
+import rego.v1
+
+warn contains msg if {
+	input.kind == "Namespace"
+	not input.metadata.labels["pod-security.kubernetes.io/enforce"]
+	msg := sprintf("Namespace %s has no pod-security.kubernetes.io/enforce label", [input.metadata.name])
 }

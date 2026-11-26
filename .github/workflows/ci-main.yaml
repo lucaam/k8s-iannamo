@@ -1,0 +1,116 @@
+# Runs after every merge, every night and on demand: build and render of every
+# HelmRelease (external chart sources included), validation, and a Trivy scan.
+# A failure opens or updates the issue labelled "ci-main"; a success closes it.
+name: ci-main
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-main
+  cancel-in-progress: false
+
+env:
+  MISE_VERSION: "2026.11.14"
+  MISE_SHA256: 6fa596291e9758106f761fea4f8e7fac6c3e7ff4714d5c0b9a76e16068db14f6
+
+jobs:
+  full:
+    name: full render
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: ${{ env.MISE_VERSION }}
+          sha256: ${{ env.MISE_SHA256 }}
+          install_args: uv kustomize helm flux2 kubeconform conftest
+      - name: Build every Flux Kustomization
+        id: build
+        run: .github/ci/fluxci build --repo . --out "$RUNNER_TEMP/build"
+      - name: Static checks
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: .github/ci/fluxci check --build "$RUNNER_TEMP/build"
+      - name: Render every HelmRelease
+        id: render
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          .github/ci/fluxci plan --head "$RUNNER_TEMP/build" --full --out "$RUNNER_TEMP/plan.json"
+          .github/ci/fluxci render --build "$RUNNER_TEMP/build" --plan "$RUNNER_TEMP/plan.json" \
+            --out "$RUNNER_TEMP/render" --cache "$RUNNER_TEMP/charts"
+      - name: Schemas and validation
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: |
+          .github/ci/fluxci schemas --repo . --out "$RUNNER_TEMP/schemas" "$RUNNER_TEMP/build" "$RUNNER_TEMP/render"
+          .github/ci/fluxci bundle --build "$RUNNER_TEMP/build" --render "$RUNNER_TEMP/render" --out "$RUNNER_TEMP/bundle"
+          .github/ci/fluxci validate --repo . --bundle "$RUNNER_TEMP/bundle" --schemas "$RUNNER_TEMP/schemas" \
+            --cache "$RUNNER_TEMP/kubeconform-cache" --label all
+
+  trivy:
+    name: trivy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Informative: findings go to code scanning, they do not fail the run.
+    continue-on-error: true
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
+        with:
+          version: ${{ env.MISE_VERSION }}
+          sha256: ${{ env.MISE_SHA256 }}
+          install_args: trivy
+      - name: Scan the manifests
+        run: trivy config --severity HIGH,CRITICAL --exit-code 0 --format sarif --output "$RUNNER_TEMP/trivy.sarif" .
+      - uses: github/codeql-action/upload-sarif@915412ff23e8b7659517e607487dbeae018f2934 # v4.39.5
+        with:
+          sarif_file: ${{ runner.temp }}/trivy.sarif
+          category: trivy-config
+
+  report:
+    name: report
+    needs: full
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Open, update or close the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.full.result }}
+          EVENT: ${{ github.event_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          label=ci-main
+          gh label create "$label" --color B60205 --description "ci-main fails on the default branch" 2>/dev/null || true
+          issue=$(gh issue list --label "$label" --state open --json number --jq '.[0].number // empty')
+          if [ "$RESULT" = "success" ]; then
+            if [ -n "$issue" ]; then
+              gh issue close "$issue" --comment "ci-main passes again: $RUN_URL"
+            fi
+            exit 0
+          fi
+          body="ci-main ($EVENT) ended with \`$RESULT\`: $RUN_URL"
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "$body"
+          else
+            gh issue create --title "ci-main fails on main" --label "$label" --body "$body"
+          fi
