@@ -174,8 +174,9 @@ and a hand-written `Endpoints` object point Traefik at that host.
   settings), both encrypted with SOPS.
 - Data: the SQLite database `social-media-reuploader-data` on `nfs-flash`,
   created by the chart with `helm.sh/resource-policy: keep`. Bot and GUI run
-  on the same node. Since v0.9.0 the database is in WAL mode, which upstream
-  supports only on local storage: the cluster has no local storage class yet.
+  on the same node. The database uses a rollback journal
+  (`SQLITE_JOURNAL_MODE: delete`, `synchronous=FULL`): WAL, the app default
+  since v0.9.0, needs local storage, and the cluster has only NFS.
 - Upgrades use client-side apply (`upgrade.serverSideApply: disabled`): the
   bot Deployment uses the Recreate strategy, which server-side apply cannot
   switch to from the defaulted RollingUpdate.
