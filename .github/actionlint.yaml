@@ -1,0 +1,6 @@
+# actionlint 1.7.12 (the latest release) predates the GA of the
+# ubuntu-26.04 GitHub-hosted runner and reports the label as unknown.
+# Declare it here until an actionlint release knows it, then drop this file.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
