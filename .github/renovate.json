@@ -134,6 +134,12 @@
       "labels": ["needs-review", "critical"]
     },
     {
+      "description": "flux2 CLI in mise.toml: it must match the Flux running in the cluster (postBuild substitution in CI must behave like kustomize-controller), and the cluster Flux is not managed by Renovate (clusters/production/flux-system is ignored). Flux 2.9 needs Kubernetes >= 1.34.1 and 2.10 needs >= 1.35.2, while the cluster runs 1.31, so #441 (2.10.1) could not be merged. Bump it by hand in the same change that upgrades Flux in the cluster",
+      "matchManagers": ["mise"],
+      "matchPackageNames": ["flux2"],
+      "enabled": false
+    },
+    {
       "description": "Cluster infrastructure (certificates, load balancer, NFS storage, monitoring stack and its CRDs, Gateway API CRDs): always manual review",
       "matchPackageNames": [
         "cert-manager",
@@ -146,7 +152,7 @@
       "labels": ["needs-review", "infrastructure"]
     },
     {
-      "description": "Stateful apps with migrations: always manual review",
+      "description": "Stateful apps with migrations: always manual review. GHCR publishes no tag timestamps, so the 3-day minimumReleaseAge of the Docker rule can never be computed for the ghcr.io images below and the update stayed in Pending Status Checks forever (Immich v3.4.x sat there for weeks). timestamp-optional lets the PR open; the manual review is the gate, as these never automerge",
       "matchPackageNames": [
         "paperless-ngx",
         "ghcr.io/paperless-ngx/paperless-ngx",
@@ -154,6 +160,7 @@
         "ghcr.io/immich-app/immich-server",
         "ghcr.io/immich-app/immich-machine-learning"
       ],
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
       "automerge": false,
       "labels": ["needs-review", "stateful"]
     },
