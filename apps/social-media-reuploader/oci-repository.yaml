@@ -11,6 +11,7 @@ spec:
   ref:
     # Keep it in step with image.tag in helm-release.yaml.
     tag: 0.9.0
+    digest: sha256:a3637a3f4d6262c1f487b116b0007978f2971eab8c81d5409335f131c546d66e
   layerSelector:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
