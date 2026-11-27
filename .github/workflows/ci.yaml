@@ -22,7 +22,7 @@ env:
 jobs:
   changes:
     name: changes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -46,7 +46,7 @@ jobs:
   lint:
     name: lint
     needs: changes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -93,7 +93,7 @@ jobs:
     name: manifests
     needs: changes
     if: needs.changes.outputs.manifests == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -129,7 +129,7 @@ jobs:
     name: render
     needs: changes
     if: needs.changes.outputs.manifests == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 25
     permissions:
       contents: read
@@ -229,7 +229,7 @@ jobs:
       !cancelled() && needs.render.outputs.diff == 'true' &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       pull-requests: write
@@ -260,7 +260,7 @@ jobs:
     # ci-gate next to the one of the newer run.
     if: ${{ !cancelled() }}
     needs: [changes, lint, manifests, render]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions: {}
     steps:
