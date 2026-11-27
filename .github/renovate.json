@@ -165,7 +165,7 @@
       "labels": ["needs-review"]
     },
     {
-      "description": "social-media-reuploader: the chart (Git tag) and the images move together, reviewed by hand",
+      "description": "social-media-reuploader: the OCI chart and the image (same release version) move together, reviewed by hand",
       "matchFileNames": ["apps/social-media-reuploader/**"],
       "groupName": "social-media-reuploader",
       "automerge": false,

@@ -164,15 +164,28 @@ verso quell'host.
 
 ### social-media-reuploader { #social-media-reuploader }
 
-- Un bot Telegram, in modalità webhook, che scarica i video linkati in una
-  chat (YouTube Shorts, TikTok, Instagram, Facebook) e ripubblica i file, più
-  una GUI web su `social-media-reuploader.${DOMAIN}` con login OAuth.
-- Il chart arriva dal repository Git
-  [lucaam/social-media-reuploader](https://github.com/lucaam/social-media-reuploader),
-  fissato al tag di release che corrisponde ai tag delle immagini; Renovate
-  propone chart e immagini insieme.
-- Dati: `social-media-reuploader-data` su `nfs-flash`, creato dal chart; un
-  post-renderer aggiunge `helm.sh/resource-policy: keep`.
+- Un bot Telegram, in modalità polling, che scarica i contenuti linkati in
+  una chat (qualsiasi sito supportato da yt-dlp) e ripubblica i file, più una
+  GUI di amministrazione su `social-media-reuploader.${DOMAIN}` con login
+  OAuth tramite Authentik (redirect URI
+  `https://social-media-reuploader.${DOMAIN}/auth`).
+- Il chart è il chart OCI firmato che ogni release di
+  [lucaam/social-media-reuploader](https://github.com/lucaam/social-media-reuploader)
+  pubblica (`oci://ghcr.io/lucaam/charts/social-media-reuploader`), fissato
+  alla release che corrisponde al tag dell'immagine; l'`OCIRepository`
+  accetta solo chart firmati dal workflow di release. Renovate propone chart
+  e immagine insieme.
+- Segreti: `social-media-reuploader-secret` (token del bot) e
+  `social-media-reuploader-gui-secret` (`SECRET_KEY` e le impostazioni
+  `OAUTH_*`), entrambi cifrati con SOPS.
+- Dati: il database SQLite `social-media-reuploader-data` su `nfs-flash`,
+  creato dal chart con `helm.sh/resource-policy: keep`. Bot e GUI girano
+  sullo stesso nodo. Dalla v0.9.0 il database è in modalità WAL, che upstream
+  supporta solo su storage locale: il cluster non ha ancora una storage class
+  locale.
+- Gli upgrade usano il client-side apply (`upgrade.serverSideApply:
+  disabled`): il Deployment del bot usa la strategia Recreate, a cui il
+  server-side apply non riesce a passare dal RollingUpdate di default.
 
 ## Applicazioni disattivate e dismesse { #disabled }
 
