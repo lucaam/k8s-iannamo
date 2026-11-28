@@ -1,3 +1,26 @@
+# Cluster alerts that the default rules of kube-prometheus-stack do not cover.
+#
+# Severity policy (routing in apps/prometheus/helm-release.yaml):
+#   critical  users or data are affected now: Telegram with sound, any hour.
+#   warning   needs a fix within a day: silent Telegram, waking hours only.
+#   info      context only: Alertmanager UI, no notification.
+#
+# Removed duplicates of the chart defaults, which are maintained upstream and
+# carry runbook links:
+#   NodeNotReady                -> KubeNodeNotReady (critical, 5m, in values)
+#   NodeCpuSaturated            -> NodeCPUHighUsage (info)
+#   PodCrashLooping             -> KubePodCrashLooping. The old rule fired on
+#                                  any restart within 15 minutes (leader
+#                                  election restarts of kube-scheduler and
+#                                  kube-controller-manager); the default one
+#                                  needs a real CrashLoopBackOff.
+#   PodNotReady                 -> KubePodNotReady
+#   DeploymentReplicasMismatch  -> KubeDeploymentReplicasMismatch
+#   StatefulSetReplicasMismatch -> KubeStatefulSetReplicasMismatch
+#   AlertmanagerConfigInconsistent -> the chart rule of the same name
+#   NodeMemoryHigh              -> NodeMemoryHighUtilization on the Talos
+#                                  nodes, NodeMemoryPressure below for the
+#                                  Proxmox host too.
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -9,112 +32,98 @@ spec:
   groups:
     - name: nodes
       rules:
-        - alert: NodeNotReady
-          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
-          for: 5m
-          labels:
-            severity: critical
-          annotations:
-            summary: "Nodo {{ $labels.node }} NotReady"
-            description: "Il nodo non è Ready da oltre 5m."
-
-        - alert: NodeMemoryHigh
-          expr: |
-            (1 - node_memory_MemAvailable_bytes
-                  / node_memory_MemTotal_bytes) > 0.90
+        # The Proxmox host runs at 85-95% memory by design: the VMs take
+        # almost all of it and the ZFS ARC is not counted as available, so a
+        # usage threshold fired for days. Pressure stall information measures
+        # the real problem: tasks waiting for memory.
+        - alert: NodeMemoryPressure
+          expr: rate(node_pressure_memory_waiting_seconds_total[5m]) > 0.10
           for: 15m
           labels:
             severity: warning
           annotations:
-            summary: "Nodo {{ $labels.instance }} sopra il 90% di memoria"
+            summary: "Memory pressure on {{ $labels.instance }}"
+            description: "Tasks on {{ $labels.instance }} spend {{ $value | humanizePercentage }} of the time waiting for memory."
+
+        # Covers the Proxmox host too: the chart rules only select
+        # job="node-exporter", so NodeFilesystemAlmostOutOfSpace is disabled
+        # in the values to avoid double alerts on the Talos nodes.
+        # Excluded: ZFS datasets (the ZfsPoolAlmostFull alerts watch the
+        # pools), pmxcfs and lxcfs (fuse), read-only Talos images (rootfs) and
+        # memory-backed filesystems.
+        - alert: NodeFilesystemAlmostFull
+          expr: |
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|zfs|fuse.*|rootfs"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|zfs|fuse.*|rootfs"} < 0.10
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} is below 10% free"
+            description: "Free space: {{ $value | humanizePercentage }}."
 
         - alert: NodeFilesystemAlmostFull
           expr: |
-            (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
-              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) < 0.10
-          for: 15m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Filesystem {{ $labels.mountpoint }} su {{ $labels.instance }} sotto il 10%"
-
-        - alert: NodeFilesystemCritical
-          expr: |
-            (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
-              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) < 0.05
+            node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|zfs|fuse.*|rootfs"}
+              / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|zfs|fuse.*|rootfs"} < 0.05
           for: 5m
           labels:
             severity: critical
           annotations:
-            summary: "Filesystem {{ $labels.mountpoint }} su {{ $labels.instance }} sotto il 5%"
+            summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} is below 5% free"
+            description: "Free space: {{ $value | humanizePercentage }}. Writes will start to fail."
 
-        - alert: NodeCpuSaturated
-          expr: |
-            (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.90
-          for: 30m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Nodo {{ $labels.instance }} sopra il 90% CPU per 30m"
-
+        # Covers the Proxmox host too; NodeClockSkewDetected is disabled in
+        # the values for the same reason as above.
         - alert: NodeClockSkew
           expr: abs(node_timex_offset_seconds) > 0.5
           for: 10m
           labels:
             severity: warning
           annotations:
-            summary: "Clock skew sul nodo {{ $labels.instance }}"
+            summary: "Clock of {{ $labels.instance }} is off by more than 0.5s"
+            description: "NTP offset: {{ $value | humanizeDuration }}. TLS and etcd are sensitive to clock skew."
 
     - name: workload
       rules:
-        - alert: PodCrashLooping
-          expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
-          for: 15m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} in crash loop"
-
-        - alert: PodNotReady
+        # The memory limits are sized from 30-day usage; an OOM kill means a
+        # limit is too tight. KubePodCrashLooping only fires if the kills
+        # go on for 15 minutes.
+        - alert: ContainerOOMKilled
           expr: |
-            sum by (namespace, pod) (
-              kube_pod_status_phase{phase=~"Pending|Unknown|Failed"}
-            ) > 0
-          for: 30m
+            (kube_pod_container_status_restarts_total
+              - kube_pod_container_status_restarts_total offset 15m >= 1)
+            and ignoring (reason)
+            min_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[15m]) == 1
           labels:
             severity: warning
           annotations:
-            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} non Ready da 30m"
-
-        - alert: DeploymentReplicasMismatch
-          expr: |
-            kube_deployment_spec_replicas
-              != kube_deployment_status_replicas_available
-          for: 30m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} ha repliche disponibili insufficienti"
-
-        - alert: StatefulSetReplicasMismatch
-          expr: |
-            kube_statefulset_status_replicas_ready
-              != kube_statefulset_status_replicas
-          for: 30m
-          labels:
-            severity: warning
-          annotations:
-            summary: "StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} repliche non Ready"
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) was OOM killed"
+            description: "The container hit its memory limit and was restarted. Check the limit against its usage."
 
     - name: certificates
       rules:
+        # cert-manager renews 30 days before expiry: 14 days left means the
+        # renewal is stuck. A certificate that was never issued reports an
+        # expiration of 0: "> 0" keeps it out of these two alerts, and
+        # CertManagerCertNotReady covers it.
         - alert: CertManagerCertExpiringSoon
-          expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 60 * 60 * 24 * 14
+          expr: (certmanager_certificate_expiration_timestamp_seconds > 0) - time() < 14 * 86400
           for: 1h
           labels:
             severity: warning
           annotations:
-            summary: "Certificato {{ $labels.namespace }}/{{ $labels.name }} scade in <14 giorni"
+            summary: "Certificate {{ $labels.namespace }}/{{ $labels.name }} expires in less than 14 days"
+            description: "Expires in {{ $value | humanizeDuration }}. Check the Certificate and its CertificateRequest."
+
+        - alert: CertManagerCertExpiringSoon
+          expr: (certmanager_certificate_expiration_timestamp_seconds > 0) - time() < 7 * 86400
+          for: 1h
+          labels:
+            severity: critical
+          annotations:
+            summary: "Certificate {{ $labels.namespace }}/{{ $labels.name }} expires in less than 7 days"
+            description: "Expires in {{ $value | humanizeDuration }}. Check the Certificate and its CertificateRequest."
 
         - alert: CertManagerCertNotReady
           expr: certmanager_certificate_ready_status{condition="True"} == 0
@@ -122,23 +131,22 @@ spec:
           labels:
             severity: warning
           annotations:
-            summary: "Certificato {{ $labels.namespace }}/{{ $labels.name }} non Ready"
+            summary: "Certificate {{ $labels.namespace }}/{{ $labels.name }} is not Ready"
 
     - name: meta
       rules:
-        - alert: ScrapeTargetDown
-          # job critici: kubelet, node-exporter, ZFS, kube-state-metrics
-          expr: up{job=~"kubelet|node-exporter|proxmox-zfs-exporter|kube-state-metrics"} == 0
+        # Without kube-state-metrics no workload alert can fire, without
+        # Gatus no EndpointDown. absent() also catches a job without any
+        # target, for example a Deployment scaled to zero. The generic
+        # TargetDown (warning) is inhibited while this one fires.
+        - alert: AlertSourceDown
+          expr: |
+            sum by (job) (up{job=~"kube-state-metrics|gatus"}) == 0
+              or absent(up{job="kube-state-metrics"})
+              or absent(up{job="gatus"})
           for: 10m
           labels:
             severity: critical
           annotations:
-            summary: "Scrape target {{ $labels.job }} ({{ $labels.instance }}) down"
-
-        - alert: AlertmanagerConfigInconsistent
-          expr: count by (service) (alertmanager_config_hash) > 1
-          for: 10m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Configurazioni Alertmanager non sincronizzate tra repliche"
+            summary: "{{ $labels.job }} is down"
+            description: "Prometheus cannot scrape {{ $labels.job }}: the alerts built on its metrics cannot fire."

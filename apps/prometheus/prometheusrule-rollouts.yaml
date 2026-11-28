@@ -1,0 +1,56 @@
+# Update window per namespace, used only to inhibit alerts in Alertmanager
+# (inhibit_rules in apps/prometheus/helm-release.yaml); it is never notified.
+#
+# An update from a Renovate or a manual pull request restarts pods: health
+# checks fail, pods are not ready, targets disappear for a few minutes. While
+# RolloutInProgress fires for a namespace, the availability alerts of that
+# namespace are held back; if the update leaves something broken, they are
+# notified as soon as the window closes.
+#
+# The window is open while, in the namespace:
+# - a Deployment, StatefulSet or DaemonSet changed generation in the last
+#   15 minutes (a new spec was applied);
+# - a pod not owned by a Job was created in the last 15 minutes (operators
+#   such as CloudNativePG replace pods without a StatefulSet; drains);
+# - a Deployment or StatefulSet that changed generation in the last 30
+#   minutes is still not fully available (slow image pulls).
+# After 30 minutes an unfinished rollout no longer holds anything back, and
+# KubeDeploymentRolloutStuck and KubeStatefulSetUpdateNotRolledOut are never
+# inhibited, so a failed update still shows up.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rollouts
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: rollouts
+      rules:
+        - alert: RolloutInProgress
+          expr: |
+            max by (namespace) (
+                changes(kube_deployment_metadata_generation[15m]) > 0
+              or
+                changes(kube_statefulset_metadata_generation[15m]) > 0
+              or
+                changes(kube_daemonset_metadata_generation[15m]) > 0
+              or
+                (time() - kube_pod_created < 900)
+                  * on (namespace, pod) group_left ()
+                  max by (namespace, pod) (kube_pod_owner{owner_kind!="Job"})
+              or
+                (kube_deployment_spec_replicas != kube_deployment_status_replicas_available)
+                  and on (namespace, deployment)
+                  changes(kube_deployment_metadata_generation[30m]) > 0
+              or
+                (kube_statefulset_replicas != kube_statefulset_status_replicas_ready)
+                  and on (namespace, statefulset)
+                  changes(kube_statefulset_metadata_generation[30m]) > 0
+            )
+          labels:
+            severity: none
+          annotations:
+            summary: "Update in progress in {{ $labels.namespace }}"
+            description: "Availability alerts of {{ $labels.namespace }} are inhibited until the rollout settles."

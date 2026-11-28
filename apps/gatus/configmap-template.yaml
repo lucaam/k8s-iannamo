@@ -23,6 +23,17 @@ data:
         client-secret: "$${OIDC_CLIENT_SECRET}"
         scopes: ["openid"]
 
+    # Alerts: Gatus does not notify the endpoints below directly. Each one
+    # carries two extra labels on its Prometheus metrics, and the EndpointDown
+    # rule (apps/prometheus/prometheusrule-endpoints.yaml) turns failures into
+    # Alertmanager alerts, routed by severity and held back while the
+    # namespace is being updated:
+    #   severity          critical: users are affected (Telegram with sound)
+    #                     warning:  degraded or internal (silent, daytime)
+    #                     info:     no notification, status page only
+    #   target_namespace  namespace of the checked service
+    # Only the "Alerting" group keeps a direct Telegram alert: it watches the
+    # Prometheus -> Alertmanager path the other alerts depend on.
     alerting:
       # Token and chat id come as env vars from the gatus-secrets secret (see
       # helm-release.yaml) and Gatus expands them: the double dollar sign keeps
@@ -60,8 +71,9 @@ data:
           - "[STATUS] == 200"
           - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 3000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "authentik"
 
       - name: "Gatus Dashboard"
         group: "Public Services"
@@ -71,8 +83,9 @@ data:
           - "[STATUS] == 200"
           - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 2000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "warning"
+          target_namespace: "gatus"
 
       - name: "Home Assistant"
         group: "Public Services"
@@ -82,8 +95,9 @@ data:
           - "[STATUS] == 200"
           - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 3000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "home-assistant"
 
       - name: "Immich Photos"
         group: "Public Services"
@@ -93,8 +107,9 @@ data:
           - "[STATUS] == 200"
           - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 4000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "immich"
 
       # The shop has its own certificate, not the wildcard one. WordPress
       # answers 302 to its installer while the database is empty and 200 once
@@ -111,8 +126,9 @@ data:
           - "[STATUS] == any(200, 302)"
           - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 4000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "merlofiorillo-shop"
 
       # ========================================
       # 🚦 GATEWAY & INGRESS
@@ -130,8 +146,9 @@ data:
         conditions:
           - "[STATUS] == 301"
           - "[RESPONSE_TIME] < 300"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "traefik"
 
       # MetalLB VIP of the traefik Service (metallb.io/loadBalancerIPs in
       # infrastructure/traefik/helm-release.yaml). From inside the cluster the
@@ -145,8 +162,9 @@ data:
           ignore-redirect: true
         conditions:
           - "[STATUS] == 301"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "traefik"
 
       # ========================================
       # 🔐 AUTHENTICATION & AUTHORIZATION
@@ -158,8 +176,9 @@ data:
         conditions:
           - "[STATUS] == 200"
           - "[RESPONSE_TIME] < 1000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "authentik"
 
       - name: "Authentik Outpost"
         group: "Auth"
@@ -168,8 +187,9 @@ data:
         conditions:
           - "[STATUS] == 204"
           - "[RESPONSE_TIME] < 1000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "warning"
+          target_namespace: "authentik"
 
       - name: "Authentik PostgreSQL"
         group: "Auth"
@@ -177,8 +197,9 @@ data:
         interval: 2m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "authentik"
 
       # ========================================
       # 🏠 HOME AUTOMATION
@@ -190,8 +211,9 @@ data:
         conditions:
           - "[CONNECTED] == true"
           - "[RESPONSE_TIME] < 2000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "home-assistant"
 
       - name: "MQTT Mosquitto"
         group: "Home Automation"
@@ -199,8 +221,9 @@ data:
         interval: 1m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "mqtt"
 
       - name: "Zigbee2MQTT"
         group: "Home Automation"
@@ -208,8 +231,9 @@ data:
         interval: 2m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "zigbee2mqtt"
 
       - name: "Ikea Obegraensad"
         group: "Home Automation"
@@ -217,9 +241,8 @@ data:
         interval: 2m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
-            failure-threshold: 20
+        extra-labels:
+          severity: "info"
 
       # ========================================
       # 📸 IMMICH
@@ -231,8 +254,9 @@ data:
         conditions:
           - "[STATUS] == 200"
           - "[RESPONSE_TIME] < 2000"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "immich"
 
       - name: "Immich Machine Learning"
         group: "Immich"
@@ -240,8 +264,9 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "warning"
+          target_namespace: "immich"
 
       - name: "Immich PostgreSQL"
         group: "Immich"
@@ -249,8 +274,9 @@ data:
         interval: 2m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "immich"
 
       - name: "Immich Valkey (Redis)"
         group: "Immich"
@@ -258,8 +284,9 @@ data:
         interval: 2m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "immich"
 
       # ========================================
       # 🛒 MERLO FIORILLO SHOP
@@ -270,8 +297,9 @@ data:
         interval: 2m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "merlofiorillo-shop"
 
       # ========================================
       # ☸️ KUBERNETES CORE
@@ -293,8 +321,9 @@ data:
         interval: 1m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "critical"
+          target_namespace: "kube-system"
 
       # ========================================
       # 🔧 INFRASTRUCTURE
@@ -305,8 +334,9 @@ data:
         interval: 5m
         conditions:
           - "[STATUS] == 200"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "warning"
+          target_namespace: "cert-manager"
 
       - name: "Cert-Manager Webhook"
         group: "Infrastructure"
@@ -314,8 +344,9 @@ data:
         interval: 5m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "warning"
+          target_namespace: "cert-manager"
 
       - name: "MetalLB Controller"
         group: "Infrastructure"
@@ -323,8 +354,9 @@ data:
         interval: 5m
         conditions:
           - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
+        extra-labels:
+          severity: "warning"
+          target_namespace: "metallb"
 
       - name: "CNPG Controller"
         group: "Infrastructure"
@@ -332,8 +364,39 @@ data:
         interval: 5m
         conditions:
           - "[CONNECTED] == true"
+        extra-labels:
+          severity: "warning"
+          target_namespace: "cnpg-system"
+
+      # ========================================
+      # 🚨 ALERTING
+      # ========================================
+      # Direct Telegram alerts, independent of Alertmanager: if Prometheus or
+      # Alertmanager stop, no other alert can reach Telegram. info keeps them
+      # out of EndpointDown, so they are never notified twice.
+      - name: "Prometheus"
+        group: "Alerting"
+        url: "http://kube-prometheus-stack-prometheus.prometheus.svc.cluster.local:9090/-/healthy"
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
         alerts:
           - type: telegram
+        extra-labels:
+          severity: "info"
+          target_namespace: "prometheus"
+
+      - name: "Alertmanager"
+        group: "Alerting"
+        url: "http://kube-prometheus-stack-alertmanager.prometheus.svc.cluster.local:9093/-/healthy"
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+        alerts:
+          - type: telegram
+        extra-labels:
+          severity: "info"
+          target_namespace: "prometheus"
 
       # ========================================
       # 🌍 EXTERNAL DEPENDENCIES
@@ -345,6 +408,8 @@ data:
         conditions:
           - "[STATUS] == 200"
           - "[RESPONSE_TIME] < 2000"
+        extra-labels:
+          severity: "info"
 
       - name: "GitHub"
         group: "External"
@@ -353,6 +418,8 @@ data:
         conditions:
           - "[STATUS] == 200"
           - "[RESPONSE_TIME] < 3000"
+        extra-labels:
+          severity: "info"
 
       - name: "Docker Hub"
         group: "External"
@@ -360,3 +427,5 @@ data:
         interval: 10m
         conditions:
           - "[STATUS] == 200"
+        extra-labels:
+          severity: "info"

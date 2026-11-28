@@ -1,0 +1,37 @@
+# Gatus health checks as Prometheus alerts.
+#
+# Gatus used to send these straight to Telegram, with no severity and no way
+# to mute them while an update restarts the service. Now each endpoint in
+# apps/gatus/configmap-template.yaml carries two extra labels on its metrics:
+#   severity          critical, warning or info (info is never notified)
+#   target_namespace  namespace of the checked service; it becomes the
+#                     namespace label, so RolloutInProgress in that namespace
+#                     inhibits the alert during an update
+# Gatus still notifies Telegram directly only for Prometheus and
+# Alertmanager, the path these alerts depend on.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: endpoints
+  namespace: prometheus
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: endpoints
+      rules:
+        # max by () drops the labels of the Gatus pod, so a Gatus restart
+        # does not resolve and re-fire the alert. 5 minutes is 5 failed
+        # checks at a 1m interval, 3 at 2m, 2 at 5m.
+        - alert: EndpointDown
+          expr: |
+            label_replace(
+              max by (name, group, severity, target_namespace) (
+                gatus_results_endpoint_success{severity=~"critical|warning"}
+              ) == 0,
+              "namespace", "$1", "target_namespace", "(.+)"
+            )
+          for: 5m
+          annotations:
+            summary: "{{ $labels.name }} is failing its health check"
+            description: "The Gatus check {{ $labels.name }} ({{ $labels.group }}) has been failing for 5 minutes: down, wrong answer or too slow. Details on the Gatus status page."

@@ -17,5 +17,8 @@ resources:
   # Alerting rules
   - prometheusrule-zfs-storage.yaml
   - prometheusrule-cluster.yaml
-  # Alertmanager config (cifrato con SOPS)
-  - secret-alertmanager-config.sops.yaml
+  - prometheusrule-endpoints.yaml
+  - prometheusrule-rollouts.yaml
+  # Telegram credentials of Alertmanager (SOPS); the routing is in
+  # helm-release.yaml
+  - secret-alertmanager-telegram.sops.yaml
