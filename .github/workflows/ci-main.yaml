@@ -23,7 +23,7 @@ env:
 jobs:
   full:
     name: full render
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -59,7 +59,7 @@ jobs:
 
   trivy:
     name: trivy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     # Informative: findings go to code scanning, they do not fail the run.
     continue-on-error: true
@@ -84,7 +84,7 @@ jobs:
 
   retention:
     name: data retention
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -122,7 +122,7 @@ jobs:
     name: report
     needs: full
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       issues: write
