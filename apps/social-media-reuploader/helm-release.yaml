@@ -42,7 +42,7 @@ spec:
     image:
       repository: ghcr.io/lucaam/social-media-reuploader
       # Same release as the chart (oci-repository.yaml); the GUI uses the same image.
-      tag: "0.9.0@sha256:11a3488403c055e8f626e84f6e36a23db6f798afab933f5d674529eaf0033096"
+      tag: "0.10.0@sha256:cdf2ce97890f0e62a28f7d391186ec47c51681f41e3bd2f54c0df47afef5ef91"
     # Overrides the resources of the chart's resourceProfile (medium), which also
     # sets a 1 CPU limit. No CPU limit on purpose: it throttled video processing.
     # The profile still sizes the /tmp emptyDir (4Gi) and the grace period (180 s).
@@ -58,6 +58,10 @@ spec:
       # The bot has always run in polling mode: with an empty WEBHOOK_URL the
       # old release fell back to it. Nothing routes Telegram webhooks here.
       MODE: polling
+      # The database is on NFS (nfs-flash): WAL, the default, needs a local
+      # filesystem. Rollback journal with synchronous=FULL; rendered for both
+      # the bot and the GUI.
+      SQLITE_JOURNAL_MODE: delete
     gui:
       existingSecret: social-media-reuploader-gui-secret
       env:

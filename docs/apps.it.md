@@ -180,9 +180,9 @@ verso quell'host.
   `OAUTH_*`), entrambi cifrati con SOPS.
 - Dati: il database SQLite `social-media-reuploader-data` su `nfs-flash`,
   creato dal chart con `helm.sh/resource-policy: keep`. Bot e GUI girano
-  sullo stesso nodo. Dalla v0.9.0 il database è in modalità WAL, che upstream
-  supporta solo su storage locale: il cluster non ha ancora una storage class
-  locale.
+  sullo stesso nodo. Il database usa il rollback journal
+  (`SQLITE_JOURNAL_MODE: delete`, `synchronous=FULL`): il WAL, default
+  dell'app dalla v0.9.0, richiede storage locale e il cluster ha solo NFS.
 - Gli upgrade usano il client-side apply (`upgrade.serverSideApply:
   disabled`): il Deployment del bot usa la strategia Recreate, a cui il
   server-side apply non riesce a passare dal RollingUpdate di default.
