@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: traefik
-      version: 37.4.0
+      version: 42.4.3
       sourceRef:
         kind: HelmRepository
         name: traefik
@@ -20,20 +20,23 @@ spec:
   install:
     crds: Skip
   values:
+    # --- LOGGING ---
+    log:
+      level: WARN
 
-    logs:
-      general:
-        level: WARN
-
-    access:
+    accessLog:
       enabled: true
 
-    crds:
-      enabled: false
+    # --- CRD ---
+    # `crds` rimosso: non esiste più come valore della chart v34+.
+    # I CRD sono gestiti da `upgrade.crds: Skip` / `install.crds: Skip` (sopra)
+    # oppure dalla chart separata `traefik-crds` se vuoi installarli esplicitamente.
 
+    # --- DEPLOYMENT ---
     deployment:
       replicas: 2
 
+    # --- PROVIDERS ---
     providers:
       kubernetesGateway:
         enabled: true
@@ -43,49 +46,67 @@ spec:
         enabled: true
         allowCrossNamespace: true
 
+    # --- PORTS ---
     ports:
       web:
         port: 8000
         exposedPort: 80
-        redirections:
-          entryPoint:
-            to: websecure
-            scheme: https
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
       websecure:
         port: 8443
         exposedPort: 443
-        tls:
-          enabled: true
+        http:
+          tls:
+            enabled: true
+          middlewares:
+            - traefik-traefik-errors@kubernetescrd
         transport:
           respondingTimeouts:
             readTimeout: 600s
             idleTimeout: 600s
             writeTimeout: 600s
-        middlewares:
-          - traefik-traefik-errors@kubernetescrd   # gestisce 500/503 su tutte le route
 
+    # --- INGRESS ROUTE DASHBOARD ---
     ingressRoute:
       dashboard:
         enabled: true
         matchRule: Host(`traefik.${DOMAIN}`)
         entryPoints: ["websecure"]
+        # The chart copies this list into spec.routes[].middlewares of the
+        # IngressRoute, whose CRD requires {name, namespace} objects: plain
+        # "name@provider" strings only work in ports.<entrypoint>.http.middlewares.
         middlewares:
           - name: authentik-forward-auth
+            namespace: traefik
           - name: traefik-errors
+            namespace: traefik
 
+    # --- GATEWAY ---
+    # The Gateway traefik-gateway is defined in gateway.yaml (web and websecure
+    # listeners) and applied by Flux only. The chart's own copy is off: it
+    # carried helm.sh/resource-policy: keep, so Helm left the object in place
+    # when it dropped it from the release.
     gateway:
-      namespacePolicy: All
+      enabled: false
 
+    # --- SERVICE ---
     service:
       annotations:
         metallb.io/ip-allocated-from-pool: external-pool
         metallb.io/allow-shared-ip: external-pool
         metallb.io/loadBalancerIPs: 192.168.178.10
 
+    # --- RESOURCES ---
+    # Every route goes through Traefik (see infrastructure/priority-classes).
+    priorityClassName: homelab-critical
+    # 30-day working set: p95 and max 102Mi per pod; CPU p95 3m, max 36m.
+    # No limits: Traefik serves every route, so it must not be throttled
+    # or OOM-killed.
     resources:
-      limits:
-        cpu: 500m
-        memory: 512Mi
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: 50m
+        memory: 128Mi

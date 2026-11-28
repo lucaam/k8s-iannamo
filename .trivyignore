@@ -1,0 +1,15 @@
+# Trivy scan exceptions — ogni eccezione deve avere un motivo documentato
+
+# Ollama richiede hostPath /dev/dri per accedere alla iGPU Intel
+# Vedi: apps/ollama/deployment.yaml
+AVD-KSV-0012  # hostPath usage
+AVD-KSV-0017  # privileged container
+
+# Traefik/ingress può usare hostPort in alcune configurazioni
+AVD-KSV-0014  # hostPort
+
+# Componenti di sistema con RBAC elevato (Flux, operatori)
+AVD-KSV-0030  # wildcard RBAC
+
+# Immagini :latest in attesa di pinning
+AVD-KSV-0001  # image tag :latest

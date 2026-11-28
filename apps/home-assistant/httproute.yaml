@@ -5,20 +5,22 @@ metadata:
   namespace: home-assistant
 spec:
   parentRefs:
-  - name: traefik-gateway
-    namespace: traefik
-    sectionName: websecure
+    - name: traefik-gateway
+      namespace: traefik
+      sectionName: websecure
   hostnames:
-  - "home.${DOMAIN}"
+    - "home.${DOMAIN}"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - name: home-assistant
-      port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: home-assistant
+          port: 8080
 ---
+# code-server (code-server.yaml), behind Authentik forward auth: Authentik
+# is the only login.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -26,23 +28,22 @@ metadata:
   namespace: home-assistant
 spec:
   parentRefs:
-  - name: traefik-gateway
-    namespace: traefik
-    sectionName: websecure
+    - name: traefik-gateway
+      namespace: traefik
+      sectionName: websecure
   hostnames:
-  - "code-home.${DOMAIN}"
-  - "code.home.${DOMAIN}"
+    - "code-home.${DOMAIN}"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: traefik.io
-        kind: Middleware
-        name: authentik-forward-auth
-    backendRefs:
-    - name: home-assistant-codeserver
-      port: 12321
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: authentik-forward-auth
+      backendRefs:
+        - name: code-server
+          port: 8080

@@ -1,0 +1,18 @@
+# Tool versions for CI and for local runs (`mise install`). Renovate keeps them
+# up to date. The aqua backend verifies the release checksums.
+[tools]
+kustomize = "5.8.3"
+# helm-controller v1.5.4 (Flux 2.8.7) embeds the Helm 4 SDK.
+helm = "4.3.2"
+# Same version as the cluster: postBuild substitution must behave like
+# kustomize-controller.
+flux2 = "2.8.7"
+kubeconform = "0.8.0"
+conftest = "0.71.1"
+yq = "4.54.3"
+actionlint = "1.7.12"
+zizmor = "1.33.1"
+"pipx:yamllint" = "1.38.0"
+uv = "0.13.10"
+node = "26.13.1"
+trivy = "0.76.2"

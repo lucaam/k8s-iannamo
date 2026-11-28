@@ -5,14 +5,39 @@ metadata:
   namespace: home-assistant
 spec:
   interval: 15m
+  # A rollout replaces the single pod: old pod shutdown (up to the grace period
+  # below) plus a startup of several minutes. The 5m default timed out (rev 106, 108).
+  timeout: 15m
   chart:
     spec:
       chart: home-assistant
-      version: "0.3.58"
+      version: "0.3.93"
       sourceRef:
         kind: HelmRepository
         name: home-assistant
         namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  postRenderers:
+    - kustomize:
+        patches:
+          # The chart has no value for the pod grace period. 240s matches the
+          # image's S6_SERVICES_GRACETIME and covers HA's own shutdown stages
+          # (20+100+60+30s), so the SQLite recorder can close the database
+          # cleanly instead of being killed after the 30s default.
+          - target:
+              kind: StatefulSet
+              name: home-assistant
+            patch: |
+              - op: add
+                path: /spec/template/spec/terminationGracePeriodSeconds
+                value: 240
+
   values:
     # Image settings
     image:
@@ -21,12 +46,21 @@ spec:
       # Image pull policy
       pullPolicy: IfNotPresent
       # Overrides the image tag whose default is the chart appVersion.
-      tag: "2026.5.2"
+      tag: "2026.11.3@sha256:24e541ddae5818bf8eb27898b9ba00d0c344a655aa5097e9e9bd4b19356be847"
     # Environment variables
     env: []
     # Use environment variables from ConfigMaps or Secrets
     envFrom: []
 
+    # Resource sizing inferred from Prometheus metrics (p95/p99 + safety).
+    # 30-day working set: p95 3341Mi, max 3506Mi; CPU p95 102m, max 1089m.
+    # No CPU limit: bursts at startup must not be throttled.
+    resources:
+      requests:
+        cpu: 200m
+        memory: 2560Mi
+      limits:
+        memory: 5376Mi  # 1.5x the 30-day max (3506Mi)
     hostPort:
       # Enable 'hostPort' or not
       enabled: false
@@ -38,11 +72,14 @@ spec:
     # Set the dnsPolicy (you'll want ClusterFirstWithHostNet if running on hostNetwork to reac
     # other k8s services via DNS
     dnsPolicy: ClusterFirstWithHostNet
+    # CoreDNS is the only nameserver: ClusterFirstWithHostNet already sets it.
+    # The router and 1.1.1.1 used to be listed as extra nameservers, but they
+    # answer NXDOMAIN for *.cluster.local and that answer is final: musl
+    # (getaddrinfo) queries every nameserver in parallel, and the "rotate"
+    # option made c-ares (HA's aiohttp resolver) spread queries over all of
+    # them, so in-cluster names failed intermittently. CoreDNS forwards
+    # external names upstream anyway.
     dnsConfig:
-      nameservers:
-        - 10.96.0.10         # CoreDNS (primario)
-        - 192.168.178.1      # Router locale (fallback)
-        - 1.1.1.1            # Cloudflare (fallback esterno)
       searches:
         - home-assistant.svc.cluster.local
         - svc.cluster.local
@@ -51,10 +88,9 @@ spec:
         - name: ndots
           value: "2"
         - name: timeout
-          value: "10"        # ← Aumentato da 5 a 10
+          value: "10"        # raised from 5 to 10
         - name: attempts
-          value: "5"         # ← Aumentato da 3 a 5
-        - name: rotate       # ← Ruota tra i nameserver
+          value: "5"         # raised from 3 to 5
         - name: single-request-reopen
     service:
       # -- annotations for the service created
@@ -73,33 +109,23 @@ spec:
     tolerations: []
     # Affinity settings for controlling pod scheduling
     affinity: {}
-    # Set a priorityClassName on Home Assistant pods
-    priorityClassName: ""
-    initContainers:
-      - name: fix-permissions
-        image: busybox
-        command: ['sh', '-c']
-        args:
-          - |
-            echo "Fixing www permissions..."
-            mkdir -p /config/www/community
-            chown 1000:1000 /config/www
-            chown -R 1000:1000 /config/www/community
-            chmod 775 /config/www
-            chmod -R 775 /config/www/community
-            echo "Done!"
-        volumeMounts:
-          - name: home-assistant
-            mountPath: /config
-        securityContext:
-          runAsUser: 0
+    # Critical for the house: preempts standard and low-priority pods when a
+    # node runs out of room (see infrastructure/priority-classes).
+    priorityClassName: homelab-critical
+    # No permission-fixing init container. HA runs as root and the NFS export
+    # does not squash root, so HA does not need uid 1000 ownership (that was
+    # for code-server, now disabled). A recursive chown/chmod of
+    # /config/www/community (~4200 entries, already 1000:1000 775) over NFS
+    # added ~2 minutes to every start.
+    initContainers: []
     # Configuration for Home Assistant
     configuration:
       # Enable or disable the configuration setup for Home Assistant
       enabled: true
       # Force init will merge the current configuration file with the default configuration on every start
       # This is useful when you want to ensure that the configuration file is always up to date
-      forceInit: true
+      # Force init can delay startup during upgrades; disable to speed readiness
+      forceInit: false
       # List of trusted proxies in the format of CIDR notation in a case of using a reverse proxy
       # Here is the list of the most common private IP ranges, use your list of possible trusted proxies, usually, it's the IP of the reverse proxy
       trusted_proxies:
@@ -183,7 +209,7 @@ spec:
         fi
       initContainer:
         name: setup-config
-        image: mikefarah/yq:4.44.2
+        image: mikefarah/yq:4.54.3@sha256:7834187596ad56fd5a81436114e0b0b9dd54c91bb43946d1f7145b2be5f9c3d2
         securityContext:
           runAsUser: 0
         command: ["/bin/sh", "-c"]
@@ -275,7 +301,15 @@ spec:
       periodSeconds: 10
       successThreshold: 1
       timeoutSeconds: 1
-    startupProbe: {}
+    startupProbe:
+      httpGet:
+        path: /
+        port: http
+        scheme: HTTP
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 18
     # initialDelaySeconds: 1
     # periodSeconds: 5
     # timeoutSeconds: 1
@@ -290,6 +324,8 @@ spec:
       # requires HA integration:  https://www.home-assistant.io/integrations/prometheus/
       enabled: true
       scrapeInterval: 30s
+      scrapeTimeout: 10s
+      path: /api/prometheus
       labels: {}
       # Bearer token authentication configuration
       bearerToken: {}
@@ -299,42 +335,9 @@ spec:
       # secretKey: ""
     # Addons configuration for additional services
     addons:
-      # Code-server addon configuration
+      # The chart's code-server addon is off: it runs inside this hostNetwork
+      # pod, so it listened on <node-ip>:12321 for the whole LAN, outside
+      # Authentik. code-server now runs in its own pod (code-server.yaml),
+      # reachable only through the Authentik-protected route.
       codeserver:
-        # Enable or disable the code-server addon
-        enabled: true
-        securityContext:
-          runAsUser: 1000
-          runAsGroup: 1000
-          fsGroup: 1000
-        # Resource settings for the code-server container
-        resources: {}
-        # Image settings for the code-server addon
-        image:
-          # Repository for the code-server image
-          repository: ghcr.io/coder/code-server
-          # Image pull policy for the code-server image
-          pullPolicy: IfNotPresent
-          # Tag for the code-server image
-          tag: "4.118.0"
-        # Authentication settings for the code-server addon
-        auth:
-          # Enable or disable authentication (if disabled, --auth none is used)
-          enabled: false
-          # Existing secret containing the password
-          # The secret should have a key 'password' containing the code-server password
-          existingSecret: ""
-          # Password for code-server (only used if existingSecret is not set)
-          # If neither existingSecret nor password is set, code-server will generate a random password
-          # which will be printed in the logs
-          password: ""
-        # Service settings
-        service:
-          # Service type (ClusterIP, NodePort, LoadBalancer, or ExternalName)
-          type: ClusterIP
-          # Service port
-          port: 12321
-        # Ingress settings for the code-server addon
-        additionalMounts: []
-        # - mountPath: /home/coder/.ssh/id_rsa
-        #   name: id-rsa
+        enabled: false

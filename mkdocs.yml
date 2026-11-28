@@ -1,37 +1,132 @@
 site_name: k8s-iannamo
-site_description: Documentazione del cluster Kubernetes homelab GitOps
+site_description: >-
+  How the k8s-iannamo homelab cluster is built and operated: Talos Linux on
+  Proxmox, managed with Flux GitOps.
 site_url: https://lucaam.github.io/k8s-iannamo/
 repo_url: https://github.com/lucaam/k8s-iannamo
 repo_name: lucaam/k8s-iannamo
+edit_uri: edit/main/docs/
 
 theme:
   name: material
-  language: it
+  # Default language; the i18n plugin sets the language of each build.
+  language: en
+  icon:
+    logo: material/kubernetes
+    repo: fontawesome/brands/github
+  # Follows the system preference until the reader picks a scheme. The toggle
+  # labels are translated for the Italian build in plugins.i18n below.
   palette:
-    - scheme: slate
+    - media: "(prefers-color-scheme)"
       primary: indigo
-      accent: cyan
+      accent: indigo
       toggle:
-        icon: material/brightness-4
-        name: Modalità chiara
-    - scheme: default
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: indigo
-      accent: cyan
+      accent: indigo
       toggle:
         icon: material/brightness-7
-        name: Modalità scura
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  # navigation.instant is left out on purpose: instant navigation does not
+  # refresh the language selector, which would keep linking to the
+  # translation of the first page opened instead of the current one.
+  # mkdocs-static-i18n warns about it, and the warning fails --strict builds.
   features:
     - navigation.sections
-    - navigation.expand
     - navigation.top
-    - content.code.copy
+    - navigation.footer
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
     - search.highlight
-  icon:
-    repo: fontawesome/brands/github
+    - search.share
+    - content.code.copy
+    - content.action.edit
+
+plugins:
+  - search
+  # One site per language: English at the root, Italian under /it/. Every
+  # page is a pair of files, page.en.md and page.it.md; a page without an
+  # Italian file falls back to the English one.
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      languages:
+        - locale: en
+          name: English
+          default: true
+          build: true
+        - locale: it
+          name: Italiano
+          build: true
+          site_description: >-
+            Come è costruito e gestito il cluster homelab k8s-iannamo: Talos
+            Linux su Proxmox, gestito con Flux in GitOps.
+          theme:
+            palette:
+              - toggle:
+                  name: Passa al tema chiaro
+              - toggle:
+                  name: Passa al tema scuro
+              - toggle:
+                  name: Usa il tema di sistema
+          nav_translations:
+            Overview: Panoramica
+            Architecture: Architettura
+            Applications: Applicazioni
+            Platform: Piattaforma
+            Infrastructure: Infrastruttura
+            Networking: Rete
+            Security and secrets: Sicurezza e segreti
+            Monitoring and alerting: Monitoraggio e alert
+            Operations: Operazioni
+            Change workflow: Flusso delle modifiche
+            Day-to-day operations: Operazioni quotidiane
+            Retiring an app: Dismettere un'app
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  # Language selector in the header. On every page the i18n plugin replaces
+  # these links with the translation of that page.
+  alternate:
+    - name: English
+      link: /k8s-iannamo/
+      lang: en
+    - name: Italiano
+      link: /k8s-iannamo/it/
+      lang: it
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/lucaam/k8s-iannamo
+      name: lucaam/k8s-iannamo on GitHub
 
 markdown_extensions:
+  - abbr
   - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -39,28 +134,29 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
-  - tables
-  - toc:
-      permalink: true
 
+# With --strict, broken links and anchors and pages missing from the nav
+# fail the build.
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+# Paths without the language suffix: the i18n plugin resolves each one to the
+# page of the language being built.
 nav:
-  - ITA 🇮🇹:
-      - Home: index.md
-      - Architettura: architecture.md
-      - Applicazioni: apps.md
-      - Infrastruttura: infrastructure.md
-      - Storage: storage.md
+  - Home: index.md
+  - Overview:
+      - Architecture: architecture.md
+      - Applications: apps.md
+  - Platform:
+      - Infrastructure: infrastructure.md
       - Networking: networking.md
-      - Sicurezza & Secret: security.md
-      - Monitoraggio & Alert: monitoring.md
-      - Operazioni: operations.md
-  - ENG 🇬🇧:
-      - Home: index.en.md
-      - Architecture: architecture.en.md
-      - Applications: apps.en.md
-      - Infrastructure: infrastructure.en.md
-      - Storage: storage.en.md
-      - Networking: networking.en.md
-      - Security & Secrets: security.en.md
-      - Monitoring & Alerting: monitoring.en.md
-      - Operations: operations.en.md
+      - Storage: storage.md
+      - Security and secrets: security.md
+      - Monitoring and alerting: monitoring.md
+  - Operations:
+      - Change workflow: workflow.md
+      - Day-to-day operations: operations.md
+      - Retiring an app: retiring-an-app.md

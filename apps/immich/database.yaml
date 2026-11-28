@@ -3,10 +3,22 @@ kind: Cluster
 metadata:
   name: immich-pg
   namespace: immich
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   imageName: tensorchord/cloudnative-vectorchord:17-0.4.3
   instances: 2
   primaryUpdateStrategy: unsupervised
+  # Every Immich request goes to the database (see infrastructure/priority-classes).
+  priorityClassName: homelab-critical
+  # 30-day usage per instance: memory p95 310Mi, p99 346Mi, max 468Mi; CPU p95
+  # 5m, max 596m. No CPU limit on purpose: bursty queries must not be throttled.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 384Mi
+    limits:
+      memory: 1Gi
   bootstrap:
     initdb:
       database: immich
@@ -18,13 +30,13 @@ spec:
         - CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;
   managed:
     roles:
-    - name: immich
-      passwordSecret:
-        name: immich-db-secret
-      # Se l'utente deve avere privilegi di superuser, scommenta la riga seguente
-      superuser: true
-      # Altrimenti, se deve essere un utente normale con privilegi di login, usa:
-      login: true
+      - name: immich
+        passwordSecret:
+          name: immich-db-secret
+        # Superuser, because Immich creates the vchord and earthdistance
+        # extensions (see postInitApplicationSQL above).
+        superuser: true
+        login: true
   postgresql:
     shared_preload_libraries:
       - "vchord.so"

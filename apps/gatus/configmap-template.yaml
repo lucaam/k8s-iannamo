@@ -6,8 +6,12 @@ metadata:
 data:
   config.yaml: |-
     # Gatus configuration with OIDC authentication
+    # History is stored in SQLite on the gatus-data PVC, mounted by the chart at
+    # persistence.mountPath (/data). The old "type: storage" is not a valid type
+    # and Gatus silently fell back to memory, losing history on every restart.
     storage:
-      type: storage
+      type: sqlite
+      path: /data/data.db
 
     metrics: true
 
@@ -20,9 +24,12 @@ data:
         scopes: ["openid"]
 
     alerting:
+      # Token and chat id come as env vars from the gatus-secrets secret (see
+      # helm-release.yaml) and Gatus expands them: the double dollar sign keeps
+      # Flux postBuild from substituting them, as for the OIDC credentials.
       telegram:
-        token: "${TELEGRAM_BOT_TOKEN}"
-        id: "${TELEGRAM_CHAT_ID}"
+        token: "$${TELEGRAM_BOT_TOKEN}"
+        id: "$${TELEGRAM_CHAT_ID}"
         default-alert:
           description: "health check failed"
           send-on-resolved: true
@@ -38,13 +45,20 @@ data:
       # ========================================
       # 🌐 SERVIZI PUBBLICI (HTTPS)
       # ========================================
+      # Hosts without a route get a real 404 from the Traefik catch-all
+      # (infrastructure/traefik/catch-all.yaml), so [STATUS] == 200 fails
+      # when a route disappears.
+      # Certificate threshold: cert-manager renews the wildcard certificate
+      # 30 days (720h) before expiry, so "> 720h" failed at every renewal;
+      # 336h (14 days, as CertManagerCertExpiringSoon) only fails if the
+      # renewal is stuck.
       - name: "Authentik SSO"
         group: "Public Services"
         url: "https://auth.${DOMAIN}"
         interval: 1m
         conditions:
           - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 3000"
         alerts:
           - type: telegram
@@ -55,7 +69,7 @@ data:
         interval: 1m
         conditions:
           - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 2000"
         alerts:
           - type: telegram
@@ -66,7 +80,7 @@ data:
         interval: 1m
         conditions:
           - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 3000"
         alerts:
           - type: telegram
@@ -77,41 +91,42 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 4000"
-        alerts:
-          - type: telegram
-
-      - name: "Kubernetes Dashboard"
-        group: "Public Services"
-        url: "https://kubernetes.${DOMAIN}"
-        interval: 2m
-        conditions:
-          - "[STATUS] == 200"
-          - "[CERTIFICATE_EXPIRATION] > 720h"
-          - "[RESPONSE_TIME] < 3000"
         alerts:
           - type: telegram
 
       # ========================================
       # 🚦 GATEWAY & INGRESS
       # ========================================
+      # The web entrypoint (:80) always answers 301 to https. Following the
+      # redirect, Gatus failed TLS verification because the wildcard certificate
+      # does not cover internal hostnames: the redirect is not followed and the
+      # 301 is the proof that Traefik answers.
       - name: "Traefik Gateway"
         group: "Gateway"
         url: "http://traefik.traefik.svc.cluster.local:80"
         interval: 30s
+        client:
+          ignore-redirect: true
         conditions:
-          - "[CONNECTED] == true"
+          - "[STATUS] == 301"
           - "[RESPONSE_TIME] < 300"
         alerts:
           - type: telegram
 
+      # MetalLB VIP of the traefik Service (metallb.io/loadBalancerIPs in
+      # infrastructure/traefik/helm-release.yaml). From inside the cluster the
+      # VIP is routed by kube-proxy: the check verifies that it is assigned and
+      # answering, not the L2 announcement on the LAN.
       - name: "Traefik LoadBalancer"
         group: "Gateway"
-        url: "http://traefik.traefik.svc.cluster.local"
+        url: "http://192.168.178.10"
         interval: 30s
+        client:
+          ignore-redirect: true
         conditions:
-          - "[CONNECTED] == true"
+          - "[STATUS] == 301"
         alerts:
           - type: telegram
 
@@ -187,15 +202,6 @@ data:
         alerts:
           - type: telegram
             failure-threshold: 20
-
-      - name: "Tado API Proxy"
-        group: "Home Automation"
-        url: "http://tado-api-proxy.tado-proxy.svc.cluster.local:8080"
-        interval: 2m
-        conditions:
-          - "[CONNECTED] == true"
-        alerts:
-          - type: telegram
 
       # ========================================
       # 📸 IMMICH

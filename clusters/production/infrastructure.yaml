@@ -6,7 +6,10 @@ metadata:
 spec:
   interval: 10m
   path: ./infrastructure
-  prune: true  # Rimuovi risorse non presenti in Git
+  prune: true  # Remove resources that are no longer in Git
+  # Deleting this Kustomization object (e.g. removing this file) keeps every
+  # object it applied; prune still removes objects that are deleted from Git.
+  deletionPolicy: Orphan
   sourceRef:
     kind: GitRepository
     name: flux-system

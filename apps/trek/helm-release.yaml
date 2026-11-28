@@ -9,15 +9,28 @@ spec:
   chart:
     spec:
       chart: ./charts/trek
+      # Defaults to spec.interval (5m). A new GitRepository artifact requeues
+      # the HelmChart anyway, so hourly is enough.
+      interval: 1h
       sourceRef:
         kind: GitRepository
         name: trek
         namespace: flux-system
+
   values:
     image:
       repository: mauriceboe/trek
-      tag: 3.0.21
-      pullPolicy: Always
+      tag: 5.2.1@sha256:7935eeb96db3202b5af896951fd96379d6eb4d3608ce93a1f2e8f850e10a2257
+      pullPolicy: IfNotPresent
+
+    resources:
+      requests:
+        cpu: 20m
+        memory: 448Mi
+      limits:
+        # null removes the chart's default 500m CPU limit, which throttled trek.
+        cpu: null
+        memory: 768Mi
 
     service:
       type: ClusterIP
@@ -30,23 +43,19 @@ spec:
       APP_URL: "https://trek.${DOMAIN}"
       FORCE_HTTPS: "true"
       TRUST_PROXY: "1"
-      # MCP Configuration
       MCP_RATE_LIMIT: "300"
       MCP_MAX_SESSION_PER_USER: "20"
-      # OIDC/OAuth2 Configuration
+      OIDC_ISSUER: "https://auth.${DOMAIN}"
       OIDC_ADMIN_CLAIM: "trip admins"
-      # Add these when you have Authentik configured:
-      # OIDC_ISSUER: "https://auth.${DOMAIN}"
-      # OIDC_CLIENT_ID: "trek"
-      # OIDC_DISCOVERY_URL: "https://auth.${DOMAIN}/application/o/.well-known/openid-configuration"
-      # OIDC_SCOPE: "openid email profile groups"
+      OIDC_DISCOVERY_URL: "https://auth.${DOMAIN}/application/o/trek/.well-known/openid-configuration"
+      # OIDC_CLIENT_SECRET does not go here: it comes from the Secret set in existingSecret below
 
     existingSecret: trek-secret
-    existingSecretKey: JWT_SECRET
+    existingSecretKey: JWT_SECRET   # key of trek-secret the chart reads ENCRYPTION_KEY from
 
     persistence:
-      # PVCs are managed by Kustomize (pvc.yaml) with ReadWriteMany.
-      # The chart's pvc.yaml template is broken (hardcodes RWO, ignores
-      # existingClaim/accessMode). Disable to stop chart from creating PVCs.
-      # The deployment template still mounts trek-data and trek-uploads.
-      enabled: false
+      enabled: true
+      data:
+        existingClaim: trek-data
+      uploads:
+        existingClaim: trek-uploads

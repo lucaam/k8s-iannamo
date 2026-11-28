@@ -8,7 +8,7 @@ spec:
   chart:
     spec:
       chart: zigbee2mqtt
-      version: "2.10.1"
+      version: "2.14.3"
       sourceRef:
         kind: HelmRepository
         name: zigbee2mqtt
@@ -16,7 +16,7 @@ spec:
   values:
     image:
       repository: koenkk/zigbee2mqtt
-      tag: 2.10.1
+      tag: 2.14.3@sha256:fb4a6b0f6868ad1cd6a9996479802b2420e599c3463b62bbff8c8cd9a908f43a
     service:
       # -- annotations for the service created
       annotations:
@@ -48,25 +48,26 @@ spec:
         # -- the name for the kubernets secret to mount as secret.yaml. This can be referenced in the config
         # by using advanced configurations https://www.zigbee2mqtt.io/guide/configuration/frontend.html#advanced-configuration
         name: "mqtt-auth"
-      # -- name of pod priority class
-      priorityClassName: ""
+      # -- name of pod priority class (see infrastructure/priority-classes)
+      priorityClassName: homelab-critical
       # -- pod dns policy
       dnsPolicy: ClusterFirst
       # -- CPU/Memory configuration for the pods
+      # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
       resources:
         requests:
-          memory: 600Mi
-          cpu: 200m
+          cpu: 20m
+          memory: 256Mi
         limits:
-          memory: 600Mi
-          cpu: 200m
+          memory: 512Mi
       # -- Overrides the entrypoint of the container
       command: {}
       # -- Node taint tolerations for the pods
       tolerations: {}
       # -- Select specific kube node, this will allow enforcing zigbee2mqtt running
       # only on the node with the USB adapter connected
-      nodeSelector: {}
+      nodeSelector:
+        kubernetes.io/hostname: talos-homelab-worker-2
       # -- Node affinity for the pods
       affinity: {}
       # -- Lifecycle configuration for the container

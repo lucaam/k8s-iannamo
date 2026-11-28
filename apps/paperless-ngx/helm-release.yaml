@@ -1,0 +1,75 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paperless-ngx
+  namespace: paperless-ngx
+spec:
+  releaseName: paperless-ngx
+  chart:
+    spec:
+      chart: paperless-ngx
+      version: "0.1.1"
+      sourceRef:
+        kind: HelmRepository
+        name: paperless-ngx
+        namespace: flux-system
+  interval: 1h
+  targetNamespace: paperless-ngx
+  values:
+    # Forza l'immagine 3.3.4 (la chart 0.1.1 userebbe 2.20.5)
+    image:
+      repository: ghcr.io/paperless-ngx/paperless-ngx
+      tag: "3.3.4"
+
+    persistence:
+      enabled: true
+      storageClass: nfs-flash
+
+    extraEnv:
+      - name: PAPERLESS_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: paperless-secret
+            key: secret-key
+      - name: PAPERLESS_AI_ENABLED
+        value: "true"
+      - name: PAPERLESS_AI_LLM_BACKEND
+        value: "ollama"
+      - name: PAPERLESS_AI_LLM_MODEL
+        value: "llama3.2:3b"
+      - name: PAPERLESS_AI_LLM_ENDPOINT
+        value: "http://ollama.ollama.svc.cluster.local:11434"
+      - name: PAPERLESS_AI_LLM_EMBEDDING_BACKEND
+        value: "ollama"
+      - name: PAPERLESS_AI_LLM_EMBEDDING_MODEL
+        value: "bge-m3"
+      - name: PAPERLESS_AI_LLM_REQUEST_TIMEOUT
+        value: "300"
+
+    app:
+      url: "https://paperless.${DOMAIN}"
+      timeZone: "Europe/Rome"
+
+      database:
+        host: "paperless-db-rw"
+        name: "paperless"
+        user: "paperless"
+        port: 5432
+        existingSecret: "paperless-db-secret"
+        existingSecretKey: "password"
+
+      oidc:
+        enabled: true
+        providerId: "authentik"
+        displayName: "Authentik SSO"
+        serverUrl: "https://auth.${DOMAIN}/application/o/paperless/"
+        existingSecret: "paperless-oidc-secret"
+        clientIdKey: "client-id"
+        clientSecretKey: "client-secret"
+        disableRegularLogin: false
+        redirectLoginToSSO: false
+
+    route:
+      enabled: false
+    ingress:
+      enabled: false

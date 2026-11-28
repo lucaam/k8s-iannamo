@@ -8,6 +8,7 @@ spec:
   chart:
     spec:
       chart: grafana
+      version: "10.5.15"
       sourceRef:
         kind: HelmRepository
         name: grafana
@@ -20,10 +21,22 @@ spec:
     persistence:
       enabled: true
       existingClaim: grafana-storage
+    # grafana.db is SQLite on the grafana-storage NFS volume: with the
+    # default RollingUpdate the new and the old pod use it at the same time
+    # during a rollout. Recreate runs one pod at a time, as for gatus.
+    deploymentStrategy:
+      type: Recreate
+    # 30-day working set: p95 127Mi, max 240Mi; CPU p95 3m, max 7m.
+    resources:
+      requests:
+        cpu: 10m
+        memory: 192Mi
+      limits:
+        memory: 512Mi
     # OIDC / Generic OAuth (Authentik) configuration
     grafana.ini:
       server:
-          root_url: https://grafana.${DOMAIN}
+        root_url: https://grafana.${DOMAIN}
       auth.generic_oauth:
         enabled: true
         name: Authentik
@@ -38,7 +51,7 @@ spec:
         # Example: if Authentik includes a `groups` array and you create a group
         # `monitoring-admin`, this expression assigns Grafana `Admin` to members,
         # otherwise assigns `Editor` so users can create dashboards.
-        role_attribute_path: "contains(groups, 'monitoring admins') && 'Admin' || contains(groups, 'monitoring editors') && 'Editor' || 'Viewer'"        
+        role_attribute_path: "contains(groups, 'monitoring admins') && 'Admin' || contains(groups, 'monitoring editors') && 'Editor' || 'Viewer'"
     envValueFrom:
       GF_AUTH_GENERIC_OAUTH_CLIENT_ID:
         secretKeyRef:

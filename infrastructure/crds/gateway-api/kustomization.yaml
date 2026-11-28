@@ -1,4 +1,19 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.5.1
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_gatewayclasses.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_gateways.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_grpcroutes.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_httproutes.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_referencegrants.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_backendtlspolicies.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_listenersets.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_tlsroutes.yaml
+  # TCPRoute and UDPRoute are GA and in the standard channel since v1.6.0.
+  # The cluster still had the experimental v1.0.0 CRDs (v1alpha2 only, no
+  # objects), applied by hand at some point; these replace them with the
+  # standard ones (v1 served and stored, v1alpha2 kept as not served so the
+  # old storedVersions entry stays valid). Traefik 3.8 (chart 43) expects v1.
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_tcproutes.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_udproutes.yaml
+  - https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.7.0/config/crd/standard/gateway.networking.k8s.io_vap_safeupgrades.yaml

@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: authentik
-      version: "2026.2.3"
+      version: "2026.8.6"
       sourceRef:
         kind: HelmRepository
         name: authentik
@@ -18,6 +18,8 @@ spec:
   targetNamespace: authentik
   values:
     global:
+      # Server and worker default to this (see infrastructure/priority-classes).
+      priorityClassName: homelab-critical
       security:
         allowInsecureImages: true
     # -- Environment variables to pass to all deployed Deployments. Does not apply to GeoIP
@@ -150,13 +152,13 @@ spec:
       replicas: 1
 
       # -- Resource limits and requests for server pods
+      # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
       resources:
-        limits:
-          cpu: 1000m
-          memory: 1Gi
         requests:
-          cpu: 200m
-          memory: 512Mi
+          cpu: 50m
+          memory: 768Mi
+        limits:
+          memory: 1280Mi
 
       # authentik server container ports
       containerPorts:
@@ -367,13 +369,13 @@ spec:
       replicas: 1
 
       # -- Resource limits and requests for the authentik worker
+      # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
       resources:
-        limits:
-          cpu: 1000m
-          memory: 1Gi
         requests:
-          cpu: 200m
-          memory: 512Mi
+          cpu: 60m
+          memory: 896Mi
+        limits:
+          memory: 1536Mi
 
       # authentik worker container ports
       containerPorts:
@@ -386,13 +388,13 @@ spec:
         # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
         failureThreshold: 3
         # -- Number of seconds after the container has started before [probe] is initiated
-        initialDelaySeconds: 5
+        initialDelaySeconds: 15
         # -- How often (in seconds) to perform the [probe]
         periodSeconds: 10
         # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
         successThreshold: 1
         # -- Number of seconds after which the [probe] times out
-        timeoutSeconds: 3
+        timeoutSeconds: 10
         ## Probe configuration
         exec:
           command:
@@ -403,13 +405,13 @@ spec:
         # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
         failureThreshold: 3
         # -- Number of seconds after the container has started before [probe] is initiated
-        initialDelaySeconds: 5
+        initialDelaySeconds: 15
         # -- How often (in seconds) to perform the [probe]
         periodSeconds: 10
         # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
         successThreshold: 1
         # -- Number of seconds after which the [probe] times out
-        timeoutSeconds: 3
+        timeoutSeconds: 10
         ## Probe configuration
         exec:
           command:
@@ -420,13 +422,13 @@ spec:
         # -- Minimum consecutive failures for the [probe] to be considered failed after having succeeded
         failureThreshold: 60
         # -- Number of seconds after the container has started before [probe] is initiated
-        initialDelaySeconds: 30
+        initialDelaySeconds: 60
         # -- How often (in seconds) to perform the [probe]
         periodSeconds: 10
         # -- Minimum consecutive successes for the [probe] to be considered successful after having failed
         successThreshold: 1
         # -- Number of seconds after which the [probe] times out
-        timeoutSeconds: 3
+        timeoutSeconds: 10
         ## Probe configuration
         exec:
           command:
@@ -435,7 +437,6 @@ spec:
 
       # -- terminationGracePeriodSeconds for container lifecycle hook
       terminationGracePeriodSeconds: 30
-
 
 
     serviceAccount:
@@ -449,14 +450,16 @@ spec:
       image:
         registry: docker.io
         repository: library/postgres
-        tag: "17.9-bookworm"
+        tag: "17.12-bookworm@sha256:1eff563f6c868b9b433566e9f3cf6e5c79fbd3b95bf70ec7277d376cdbfc50d7"
       auth:
         database: "authentik"
         username: "authentik"
-        existingSecret: "authentik-secrets"           # Riferimento al secret
+        existingSecret: "authentik-secrets"           # Secret reference
         secretKeys:
-          userPasswordKey: "postgres-password"      # Key nel secret per la password
+          userPasswordKey: "postgres-password"      # Key in the secret that holds the password
       primary:
+        # Same priority as the server and worker (see infrastructure/priority-classes).
+        priorityClassName: homelab-critical
         args:
           - -c
           - config_file=/bitnami/postgresql/conf/postgresql.conf
@@ -493,6 +496,13 @@ spec:
             - ReadWriteMany
         containerSecurityContext:
           readOnlyRootFilesystem: false
+        # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
+        resources:
+          requests:
+            cpu: 100m
+            memory: 448Mi
+          limits:
+            memory: 1Gi
       readReplicas:
         resourcesPreset: "none"
       backup:

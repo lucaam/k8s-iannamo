@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: ollama
+  labels:
+    app: ollama
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      initContainers:
+        - name: pull-models
+          image: ollama/ollama:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "▶ Starting temporary ollama server for pull..."
+              OLLAMA_HOST=127.0.0.1:11434 ollama serve &
+              SERVER_PID=$!
+
+              echo "▶ Waiting for server to be ready..."
+              for i in $(seq 1 60); do
+                if ollama list >/dev/null 2>&1; then
+                  echo "✅ Server ready after ${i}s"
+                  break
+                fi
+                sleep 1
+              done
+
+              echo "▶ Pulling llama3.2:3b..."
+              ollama pull llama3.2:3b
+
+              echo "▶ Pulling bge-m3..."
+              ollama pull bge-m3
+
+              echo "✅ Models ready"
+              kill $SERVER_PID 2>/dev/null || true
+          volumeMounts:
+            - name: models
+              mountPath: /root/.ollama
+
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          imagePullPolicy: IfNotPresent
+          command: ["ollama", "serve"]
+          env:
+            - name: OLLAMA_HOST
+              value: "0.0.0.0:11434"
+            - name: OLLAMA_NUM_GPU
+              value: "0"
+            - name: OLLAMA_NO_CLOUD
+              value: "1"
+          ports:
+            - containerPort: 11434
+              name: http
+          volumeMounts:
+            - name: models
+              mountPath: /root/.ollama
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/tags
+              port: 11434
+            initialDelaySeconds: 60
+            periodSeconds: 30
+
+      volumes:
+        - name: models
+          persistentVolumeClaim:
+            claimName: ollama-models

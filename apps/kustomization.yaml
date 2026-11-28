@@ -7,20 +7,13 @@ resources:
   - home-assistant
   - home-assistant-matter-server
   - immich
-  - tado-api-proxy
+  # - open-webui
+  # - tado-api-proxy
   - gatus
   - prometheus
   - grafana
   - external-services
   - trek
   - social-media-reuploader
-  - musicseerr
-  - soulsync
-  - aurral
-  - profilarr
-  - slskd
-  - media-servarr
-  - media
-  - jellyfin
-  - k8s-at-home
-  - transmission
+  # - paperless-ngx
+  # - ollama

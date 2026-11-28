@@ -9,12 +9,18 @@ spec:
       namespace: traefik
       sectionName: websecure
   rules:
+    # Requests that match no other route must get a real 404. Rewriting to
+    # /404.html made nginx serve the page with 200, so monitors saw unknown
+    # or removed hosts as healthy. The rewrite now targets a path that is not
+    # in the traefik-error-pages ConfigMap: nginx answers 404 and the
+    # traefik-errors middleware on the websecure entrypoint replaces the body
+    # with 404.html, keeping the 404 status.
     - filters:
         - type: URLRewrite
           urlRewrite:
             path:
               type: ReplaceFullPath
-              replaceFullPath: /404.html
+              replaceFullPath: /no-route-matched
       backendRefs:
         - name: traefik-error-service
           port: 80

@@ -8,20 +8,68 @@ spec:
   chart:
     spec:
       chart: home-assistant-matter-server
-      version: "4.1.12"
+      version: "5.1.0"
       sourceRef:
         kind: HelmRepository
         name: wittdennis
         namespace: flux-system
+
+  postRenderers:
+    - kustomize:
+        patches:
+          # The chart has no value for the priority class.
+          - target:
+              kind: StatefulSet
+              name: home-assistant-matter-server
+            patch: |
+              - op: add
+                path: /spec/template/spec/priorityClassName
+                value: homelab-critical
+          - target:
+              kind: Service
+              name: home-assistant-matter-server
+            patch: |
+              - op: add
+                path: /metadata/annotations
+                value:
+                  metallb.io/address-pool: external-pool
+                  metallb.io/loadBalancerIPs: 192.168.178.14
+          # The chart hardcodes a privileged container that may escalate
+          # privileges. The server needs neither: it mounts no host devices
+          # (Bluetooth commissioning is off), and on the host network it only
+          # uses UDP sockets, mDNS multicast and /data, which root owns. So
+          # drop every capability and keep the rest of the chart's settings
+          # (root, read-only root filesystem, RuntimeDefault seccomp).
+          # The former patches targeted a Deployment, but the chart renders
+          # a StatefulSet, so they never applied.
+          - target:
+              kind: StatefulSet
+              name: home-assistant-matter-server
+            patch: |
+              apiVersion: apps/v1
+              kind: StatefulSet
+              metadata:
+                name: home-assistant-matter-server
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: home-assistant-matter-server
+                        securityContext:
+                          privileged: false
+                          allowPrivilegeEscalation: false
+                          capabilities:
+                            drop:
+                              - ALL
+
   values:
     image:
-      repository: ghcr.io/matter-js/python-matter-server
+      repository: matter-js/matterjs-server
       pullPolicy: IfNotPresent
-      tag: "8.1.2"
+      tag: "1.6.1"
 
     log:
       logLevel: info
-      logLevelSDK: progress
 
     bluetoothCommissioning:
       enabled: false
@@ -29,47 +77,21 @@ spec:
     service:
       type: LoadBalancer
       port: 5580
-      annotations:
-        metallb.io/ip-allocated-from-pool: external-pool
-        metallb.io/allow-shared-ip: external-pool
-        metallb.io/loadBalancerIPs: 192.168.178.14
 
-# Enable hostNetwork and hostPort for Matter Server requirements
-    hostNetwork: true
-    hostPort: true
+    port: 5580
+    networkInterface: eth0
 
-    # Disable chart persistence, use external PVC instead
     persistence:
-      enabled: false
+      storageClassName: nfs-spacex
+      size: 2Gi
 
-    additionalVolumes:
-      - name: data
-        persistentVolumeClaim:
-          claimName: home-assistant-matter-server-data
-
-    additionalMounts:
-      - name: data
-        mountPath: /data
-
-    podSecurityContext:
-      fsGroup: 1000
-      runAsNonRoot: false
-      runAsUser: 0
-
-    securityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-      readOnlyRootFilesystem: false
-
+    # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
     resources:
       requests:
+        cpu: 20m
         memory: 256Mi
-        cpu: 100m
       limits:
         memory: 512Mi
-        cpu: 500m
 
     livenessProbe:
       httpGet:
@@ -88,9 +110,3 @@ spec:
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 3
-
-    nodeSelector: {}
-
-    tolerations: []
-
-    affinity: {}

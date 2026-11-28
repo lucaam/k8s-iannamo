@@ -8,18 +8,21 @@ spec:
   chart:
     spec:
       chart: kube-prometheus-stack
-      version: "85.1.1"
+      version: "94.2.0"
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
         namespace: flux-system
-  # Upgrade strategy: ricreare le risorse se cambiano i selector
-  # (necessario per StatefulSet di Prometheus/Alertmanager se modifichiamo storage)
+  # CRDs follow the chart: the prometheus-operator CRDs must match the
+  # operator version. With Skip they had stayed at 0.82.2 while the operator
+  # moved to 0.94. CreateReplace updates them on every chart upgrade; Helm
+  # never deletes CRDs, so the objects (ServiceMonitors, PrometheusRules...)
+  # are kept.
   install:
-    crds: Skip
+    crds: CreateReplace
     timeout: 10m
   upgrade:
-    crds: Skip
+    crds: CreateReplace
     timeout: 10m
     remediation:
       retries: 3
@@ -55,13 +58,14 @@ spec:
                 requests:
                   storage: 20Gi
 
-        # Lasciamo headroom prima di kill OOM
+        # 30-day working set: p95 734Mi, max 1514Mi; CPU p95 28m, max 497m.
+        # Request near p95/p99, memory limit about 2x the max to leave room
+        # for WAL replay after a restart, no CPU limit.
         resources:
           requests:
-            cpu: 200m
+            cpu: 50m
             memory: 1Gi
           limits:
-            cpu: 1500m
             memory: 3Gi
 
     # ----------------------------------------------------------------
@@ -75,6 +79,29 @@ spec:
         # "alertmanager-config" (chiave: alertmanager.yaml).
         configSecret: alertmanager-config
 
+        # Dead man's switch: prepared, NOT enabled.
+        # Watchdog fires all the time and the secret routes it to the "null"
+        # receiver, so nothing notices when Prometheus, Alertmanager or the
+        # whole cluster stop. To enable it, create an external check first
+        # (for example on healthchecks.io: period 1 minute, grace 10 minutes,
+        # notifications to Telegram or e-mail), then edit
+        # secret-alertmanager-config.sops.yaml with sops and, inside
+        # alertmanager.yaml:
+        # 1. add this route as the first entry of route.routes (the existing
+        #    "null" route still catches InfoInhibitor):
+        #      - receiver: heartbeat
+        #        matchers:
+        #          - alertname="Watchdog"
+        #        group_wait: 0s
+        #        group_interval: 1m
+        #        repeat_interval: 1m
+        # 2. add the receiver; the ping URL is a credential, so it only goes
+        #    into the encrypted secret, never in this file:
+        #      - name: heartbeat
+        #        webhook_configs:
+        #          - url: "https://hc-ping.com/<CHECK-UUID>"
+        #            send_resolved: false
+
         retention: 168h  # 7 giorni di storia notifiche
         storage:
           volumeClaimTemplate:
@@ -85,12 +112,13 @@ spec:
                 requests:
                   storage: 2Gi
 
+        # 30-day working set: p95 42Mi, max 44Mi; CPU p95 0m, max 15m.
+        # Replaces the operator default (memory request 200Mi only).
         resources:
           requests:
-            cpu: 50m
+            cpu: 10m
             memory: 64Mi
           limits:
-            cpu: 200m
             memory: 256Mi
 
     # ----------------------------------------------------------------

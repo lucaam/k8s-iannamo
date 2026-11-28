@@ -8,11 +8,22 @@ spec:
   chart:
     spec:
       chart: mosquitto
-      version: "0.6.1"
+      version: "0.7.0"
       sourceRef:
         kind: HelmRepository
         name: mosquitto
         namespace: flux-system
+  # The chart has no value for the priority class.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: mosquitto
+            patch: |
+              - op: add
+                path: /spec/template/spec/priorityClassName
+                value: homelab-critical
   values:
 
 
@@ -96,12 +107,12 @@ spec:
                 name: websocket  # Only websocket port is HTTP-compatible
 
     # Resource limits and requests
+    # No CPU limit on purpose: CFS throttling makes probes fail during bursts.
     resources:
-      limits:
-        cpu: 100m
-        memory: 128Mi
       requests:
-        cpu: 100m
+        cpu: 10m
+        memory: 32Mi
+      limits:
         memory: 128Mi
 
     # Health checks
@@ -173,5 +184,7 @@ spec:
       # Use an existing PVC instead of creating a new one
       # If defined, PVC must be created manually before volume will be bound
       # existingClaim:
-      # Annotations for PVC
-      annotations: {}
+      # Annotations for PVC. keep: a Helm uninstall (for example when the app is
+      # removed from Git) leaves the PVC and its data in place.
+      annotations:
+        helm.sh/resource-policy: keep

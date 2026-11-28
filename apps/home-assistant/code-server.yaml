@@ -1,0 +1,91 @@
+# code-server, to edit the Home Assistant configuration from the browser.
+#
+# It runs in its own pod on the pod network, so it opens no port on the
+# nodes: the only way in is the Authentik-protected HTTPRoute
+# home-assistant-codeserver (httproute.yaml), and Authentik is the only
+# login (--auth none). The chart's addon could not do that, because it runs
+# inside the hostNetwork Home Assistant pod.
+#
+# It mounts the Home Assistant config volume (ReadWriteMany on NFS) and runs
+# as root, so that it can also edit the files Home Assistant writes as root,
+# such as automations.yaml. The image's fixuid only rewrites ownership inside
+# the image and skips mounted volumes, so /config is not touched.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-server
+  namespace: home-assistant
+  labels:
+    app.kubernetes.io/name: code-server
+    app.kubernetes.io/part-of: home-assistant
+spec:
+  replicas: 1
+  # Never two editors on the same files.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: code-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: code-server
+        app.kubernetes.io/part-of: home-assistant
+    spec:
+      priorityClassName: homelab-low
+      containers:
+        - name: code-server
+          image: ghcr.io/coder/code-server:4.146.0@sha256:fc708b18f6c613b5a9d00f1d1801e58376d3df9c5b5de77f5c02d67b711f99c9
+          args:
+            - --auth
+            - none
+            - --bind-addr
+            - 0.0.0.0:8080
+            # Settings and extensions stay where the addon kept them.
+            - --user-data-dir
+            - /config/.vscode
+            - --extensions-dir
+            - /config/.vscode
+            - /config
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          # 30-day working set of the addon: p95 370Mi, p99 548Mi, max 688Mi.
+          resources:
+            requests:
+              cpu: 10m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            # Created by the Home Assistant StatefulSet (volumeClaimTemplates).
+            claimName: home-assistant-home-assistant-0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-server
+  namespace: home-assistant
+  labels:
+    app.kubernetes.io/name: code-server
+    app.kubernetes.io/part-of: home-assistant
+spec:
+  selector:
+    app.kubernetes.io/name: code-server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

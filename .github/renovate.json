@@ -1,56 +1,82 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
-    ":semanticCommits",
-    "helpers:pinGitHubActionDigests"
+    "config:best-practices",
+    ":dependencyDashboard",
+    ":semanticCommits"
   ],
   "timezone": "Europe/Rome",
   "branchPrefix": "renovate/",
-  "prConcurrentLimit": 5,
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 2,
   "automergeStrategy": "squash",
   "separateMajorMinor": true,
+
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+    "**/.mise/locks/**",
+    "**/.config/mise/locks/**",
+    "**/*.sops.yaml",
+    "apps/ollama/**",
+    "apps/open-webui/**",
+    "apps/paperless-ngx/**",
+    "apps/tado-api-proxy/**",
+    "clusters/production/flux-system/**"
+  ],
+
   "flux": {
-    "fileMatch": [
-      "(^|/)apps/.+\\.ya?ml$",
-      "(^|/)infrastructure/.+\\.ya?ml$",
-      "(^|/)clusters/.+\\.ya?ml$"
+    "managerFilePatterns": [
+      "/(^|/)apps/.+\\.ya?ml$/",
+      "/(^|/)infrastructure/.+\\.ya?ml$/",
+      "/(^|/)clusters/.+\\.ya?ml$/"
     ]
   },
-  "regexManagers": [
+
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/(^|/)apps/.+\\.ya?ml$/",
+      "/(^|/)infrastructure/.+\\.ya?ml$/"
+    ]
+  },
+
+  "customManagers": [
     {
-      "description": "Docker images with repository + tag on separate lines in HelmRelease values",
-      "fileMatch": [
-        "(^|/)apps/.*helm-release\\.ya?ml$",
-        "(^|/)infrastructure/.*helm-release\\.ya?ml$"
-      ],
-      "matchStrings": [
-        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,3}?\\s*tag:\\s*['\"]?(?<currentValue>[^'\"\\s@]+)"
-      ],
-      "datasourceTemplate": "docker",
-      "packageNameTemplate": "{{{depName}}}"
-    }
-    ,
+      "customType": "regex",
+      "description": "Gateway API CRDs pulled from raw GitHub URLs: one dependency per URL, all bumped in the same PR. Only plain vX.Y.Z releases (no rc or monthly tags)",
+      "managerFilePatterns": ["/(^|/)infrastructure/crds/gateway-api/kustomization\\.yaml$/"],
+      "matchStrings": ["kubernetes-sigs/gateway-api/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/"],
+      "depNameTemplate": "kubernetes-sigs/gateway-api",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^(?<version>v\\d+\\.\\d+\\.\\d+)$"
+    },
     {
-      "description": "Docker images in Helm chart values.yaml files (charts/*/values.yaml)",
-      "fileMatch": [
-        "(^|/).*charts/.*/values\\.ya?ml$"
-      ],
-      "matchStrings": [
-        "repository:\\s*['\"]?(?<depName>[^'\"\\s]+)['\"]?\\s*\\n(?:[^\\n]*\\n){0,5}?\\s*tag:\\s*['\"]?(?<currentValue>v?[^'\"\\s@]+)"
-      ],
-      "datasourceTemplate": "docker",
-      "packageNameTemplate": "{{{depName}}}"
+      "customType": "regex",
+      "description": "CloudNativePG operator manifest pulled from a raw GitHub URL. The version appears twice (release-X.Y branch and cnpg-X.Y.Z.yaml), so the whole path is rewritten. Only plain vX.Y.Z releases (no rc tags)",
+      "managerFilePatterns": ["/(^|/)infrastructure/crds/cnpg/kustomization\\.yaml$/"],
+      "matchStrings": ["cloudnative-pg/cloudnative-pg/release-\\d+\\.\\d+/releases/cnpg-(?<currentValue>\\d+\\.\\d+\\.\\d+)\\.yaml"],
+      "depNameTemplate": "cloudnative-pg/cloudnative-pg",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>\\d+\\.\\d+\\.\\d+)$",
+      "autoReplaceStringTemplate": "cloudnative-pg/cloudnative-pg/release-{{{newMajor}}}.{{{newMinor}}}/releases/cnpg-{{{newValue}}}.yaml"
     }
   ],
+
   "packageRules": [
     {
-      "description": "Global: group minor+patch Helm updates per chart",
+      "description": "Global: group minor+patch Helm updates per chart, automerge after 3 days",
       "matchDatasources": ["helm"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "helm {{depName}}",
       "automerge": true,
       "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
       "labels": ["automerge", "helm"]
     },
     {
@@ -61,11 +87,12 @@
       "labels": ["needs-review", "helm"]
     },
     {
-      "description": "Docker: minor+patch automerge",
+      "description": "Docker: minor+patch automerge after 3 days",
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
       "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
       "labels": ["automerge", "docker"]
     },
     {
@@ -76,37 +103,157 @@
       "labels": ["needs-review", "docker"]
     },
     {
-      "description": "Immich: always manual review (breaking changes on minor)",
+      "description": "PostgreSQL server images: never propose a major upgrade. A new major cannot start on the old data directory: it needs a planned dump/restore (or pg_upgrade) or a CNPG major upgrade. A plain tag bump such as #407 (17 -> 19) would break the Authentik database",
+      "matchDatasources": ["docker"],
       "matchPackageNames": [
-        "immich",
-        "ghcr.io/immich-app/immich-server",
-        "ghcr.io/immich-app/immich-machine-learning",
-        "docker.io/valkey/valkey"
+        "docker.io/library/postgres",
+        "library/postgres",
+        "postgres",
+        "ghcr.io/cloudnative-pg/postgresql",
+        "ghcr.io/tensorchord/cloudnative-vectorchord",
+        "tensorchord/cloudnative-vectorchord"
+      ],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Critical infrastructure: always manual review",
+      "matchPackageNames": [
+        "authentik",
+        "ghcr.io/goauthentik/server",
+        "cloudnative-pg",
+        "cloudnative-pg/cloudnative-pg",
+        "ghcr.io/cloudnative-pg/cloudnative-pg",
+        "flux2",
+        "flux-operator",
+        "fluxcd/flux2",
+        "traefik",
+        "traefik/traefik"
       ],
       "automerge": false,
+      "labels": ["needs-review", "critical"]
+    },
+    {
+      "description": "flux2 CLI in mise.toml: it must match the Flux running in the cluster (postBuild substitution in CI must behave like kustomize-controller), and the cluster Flux is not managed by Renovate (clusters/production/flux-system is ignored). Flux 2.9 needs Kubernetes >= 1.34.1 and 2.10 needs >= 1.35.2, while the cluster runs 1.31, so #441 (2.10.1) could not be merged. Bump it by hand in the same change that upgrades Flux in the cluster",
+      "matchManagers": ["mise"],
+      "matchPackageNames": ["flux2"],
+      "enabled": false
+    },
+    {
+      "description": "Cluster infrastructure (certificates, load balancer, NFS storage, monitoring stack and its CRDs, Gateway API CRDs): always manual review",
+      "matchPackageNames": [
+        "cert-manager",
+        "metallb",
+        "csi-driver-nfs",
+        "kube-prometheus-stack",
+        "kubernetes-sigs/gateway-api"
+      ],
+      "automerge": false,
+      "labels": ["needs-review", "infrastructure"]
+    },
+    {
+      "description": "Stateful apps with migrations: always manual review. GHCR publishes no tag timestamps, so the 3-day minimumReleaseAge of the Docker rule can never be computed for the ghcr.io images below and the update stayed in Pending Status Checks forever (Immich v3.4.x sat there for weeks). timestamp-optional lets the PR open; the manual review is the gate, as these never automerge",
+      "matchPackageNames": [
+        "paperless-ngx",
+        "ghcr.io/paperless-ngx/paperless-ngx",
+        "immich",
+        "ghcr.io/immich-app/immich-server",
+        "ghcr.io/immich-app/immich-machine-learning"
+      ],
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": false,
+      "labels": ["needs-review", "stateful"]
+    },
+    {
+      "description": "trek: the chart (Git tag of liketrek/TREK) and the image move together, reviewed by hand",
+      "matchFileNames": ["apps/trek/**"],
+      "groupName": "trek",
+      "automerge": false,
       "labels": ["needs-review"]
     },
     {
-      "description": "kube-prometheus-stack: only patch automerge (minor can break CRDs)",
+      "description": "social-media-reuploader: the OCI chart and the image (same release version) move together, reviewed by hand",
+      "matchFileNames": ["apps/social-media-reuploader/**"],
+      "groupName": "social-media-reuploader",
+      "automerge": false,
+      "labels": ["needs-review"]
+    },
+    {
+      "description": "matter-js/matterjs-server is hosted on GHCR, not Docker Hub. Lookup there and skip digest pinning.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["matter-js/matterjs-server"],
+      "registryUrls": ["https://ghcr.io"],
+      "pinDigests": false
+    },
+    {
+      "description": "Ollama: patch automerge, minor manual",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ollama/ollama"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "minimumReleaseAge": "3 days",
+      "labels": ["automerge", "docker"]
+    },
+    {
+      "description": "Open WebUI: patch automerge, minor manual",
       "matchDatasources": ["helm"],
-      "matchPackageNames": ["kube-prometheus-stack"],
-      "matchUpdateTypes": ["minor"],
-      "automerge": false,
-      "labels": ["needs-review", "helm"]
+      "matchPackageNames": ["open-webui"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "minimumReleaseAge": "3 days",
+      "labels": ["automerge", "helm"]
     },
     {
-      "description": "Authentik: only patch automerge (minor may require migrations)",
-      "matchPackageNames": ["authentik", "ghcr.io/goauthentik/server"],
-      "matchUpdateTypes": ["minor"],
-      "automerge": false,
-      "labels": ["needs-review"]
+      "description": "Home automation stack (Home Assistant with its code-server and init container images, Matter server, Zigbee2MQTT, Mosquitto). Every bump restarts Home Assistant or a service it depends on, so minor, patch and digest updates go into one PR that is created, rebased and automerged only between 02:00 and 06:00 Europe/Rome: one restart window instead of one restart per update. GHCR publishes no tag timestamps, so for ghcr.io images the 3-day age cannot be computed; timestamp-optional lets them through in the next window instead of leaving them pending forever",
+      "matchFileNames": [
+        "apps/home-assistant/**",
+        "apps/home-assistant-matter-server/**",
+        "apps/zigbee2mqtt/**",
+        "apps/mosquitto/**"
+      ],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "home automation",
+      "schedule": ["* 2-5 * * *"],
+      "automergeSchedule": ["* 2-5 * * *"],
+      "updateNotScheduled": false,
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "pr",
+      "prPriority": 5,
+      "prConcurrentLimit": 0,
+      "addLabels": ["home-automation"]
     },
     {
-      "description": "GitHub Actions: pin digests and automerge minor/patch",
+      "description": "Home automation stack: majors stay out of the group and are never automerged (one PR each, manual review)",
+      "matchFileNames": [
+        "apps/home-assistant/**",
+        "apps/home-assistant-matter-server/**",
+        "apps/zigbee2mqtt/**",
+        "apps/mosquitto/**"
+      ],
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "addLabels": ["home-automation"]
+    },
+    {
+      "description": "kubernetes manager: images in HelmRelease values are already tracked by the flux manager, so skip the duplicates it finds in helm-release.yaml",
+      "matchManagers": ["kubernetes"],
+      "matchFileNames": ["**/helm-release.yaml"],
+      "enabled": false
+    },
+    {
+      "description": "kubernetes manager: track images only, not apiVersion bumps. Renovate cannot know which API versions the installed controllers serve (it would propose notification.toolkit.fluxcd.io/v1 for the Flux Alert, which the Flux 2.8 notification-controller does not serve)",
+      "matchDatasources": ["kubernetes-api"],
+      "enabled": false
+    },
+    {
+      "description": "GitHub Actions: pin digests and automerge minor/patch/digest once they are 3 days old (a compromised tag or release is not merged on day zero)",
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "automerge": true,
       "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
       "labels": ["automerge", "ci"]
     },
     {

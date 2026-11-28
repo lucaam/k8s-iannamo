@@ -15,6 +15,12 @@ spec:
     - path:
         type: PathPrefix
         value: /
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: traefik.io
+        kind: Middleware
+        name: immich-buffering
     backendRefs:
     - name: immich-server
       port: 2283

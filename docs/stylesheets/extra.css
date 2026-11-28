@@ -1,0 +1,5 @@
+/* Inline code in tables (names, paths, addresses) wraps only where the text
+   allows it, such as after a hyphen, never in the middle of a word. */
+.md-typeset table:not([class]) code {
+  word-break: normal;
+}
