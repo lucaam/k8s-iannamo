@@ -176,6 +176,7 @@ condizione sbagliata, poi corretta.
 | Home Automation | Home Assistant, Mosquitto, Zigbee2MQTT e un pannello LED in LAN | `critical`; pannello LED `info` |
 | Immich | server, machine learning, PostgreSQL, Valkey | `critical`; machine learning `warning` (si fermano ricerca e volti, foto e upload funzionano) |
 | Merlo Fiorillo Shop | porta di MariaDB | `critical` |
+| Music | endpoint di salute di SoulSync, slskd e Prowlarr; Transmission che risponde `401` attraverso il firewall di gluetun | `warning` |
 | Cluster Core | CoreDNS | `critical` |
 | Infrastructure | cert-manager e il suo webhook, webhook di MetalLB, webhook di CloudNativePG | `warning` |
 | Alerting | `/-/healthy` di Prometheus e Alertmanager | alert Telegram diretto |

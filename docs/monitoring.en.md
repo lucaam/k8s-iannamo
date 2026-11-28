@@ -171,6 +171,7 @@ has since been fixed.
 | Home Automation | Home Assistant, Mosquitto, Zigbee2MQTT and a LED panel on the LAN | `critical`; LED panel `info` |
 | Immich | server, machine learning, PostgreSQL, Valkey | `critical`; machine learning `warning` (search and faces stop, photos and uploads work) |
 | Merlo Fiorillo Shop | MariaDB port | `critical` |
+| Music | SoulSync, slskd and Prowlarr health endpoints; Transmission answering `401` through the gluetun firewall | `warning` |
 | Cluster Core | CoreDNS | `critical` |
 | Infrastructure | cert-manager and its webhook, MetalLB webhook, CloudNativePG webhook | `warning` |
 | Alerting | Prometheus and Alertmanager `/-/healthy` | direct Telegram alert |

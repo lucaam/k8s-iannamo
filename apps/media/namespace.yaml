@@ -1,0 +1,15 @@
+# Music stack: SoulSync manages the library, slskd (Soulseek) and Transmission
+# (torrents, behind a VPN) download, Prowlarr searches the torrent indexers.
+# Everything shares the media-data volume, so it lives in one namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: media
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    # The gluetun sidecar of Transmission needs NET_ADMIN for the WireGuard
+    # tunnel and its firewall, which baseline does not allow. The other
+    # containers run as uid 1000 without capabilities. audit and warn keep
+    # the cluster default (restricted).
+    pod-security.kubernetes.io/enforce: privileged

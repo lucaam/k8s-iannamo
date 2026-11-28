@@ -120,6 +120,10 @@ spec:
 | `trek.${DOMAIN}` | `trek/trek` | OIDC |
 | `social-media-reuploader.${DOMAIN}` | `social-media-reuploader/social-media-reuploader-gui` | OAuth |
 | `shop.merlofiorillo.it` | `merlofiorillo-shop/wordpress`, on `websecure-merlofiorillo-shop` | WordPress login; installer blocked |
+| `soulsync.${DOMAIN}` | `media/soulsync` | forward auth |
+| `slskd.${DOMAIN}` | `media/slskd` | forward auth |
+| `prowlarr.${DOMAIN}` | `media/prowlarr` | forward auth |
+| `transmission.${DOMAIN}` | `media/transmission` | forward auth |
 | `homelab.${DOMAIN}` | `external-services/external-http` | forward auth |
 | `immich`, `immich.lan` | `immich/immich-internal`, on `web` and `websecure` | Immich login |
 
@@ -155,7 +159,7 @@ sequenceDiagram
 
 - An HTTPRoute can only use a Middleware of its own namespace, so the
   middleware is copied where it is needed: `traefik` (dashboard),
-  `home-assistant`, `prometheus` and `external-services`.
+  `home-assistant`, `prometheus`, `external-services` and `media`.
 - The HTTPRoute `authentik/authentik-outpost` sends `/outpost.goauthentik.io`
   on every host under `${DOMAIN}` to the outpost, which completes the login.
 - The middleware forwards the `X-authentik-*` headers (user name, groups,

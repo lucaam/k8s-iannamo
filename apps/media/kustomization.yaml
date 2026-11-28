@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - secret-slskd.sops.yaml
+  - secret-transmission.sops.yaml
+  - secret-gluetun.sops.yaml
+  - middleware-authentik.yaml
+  - soulsync.yaml
+  - slskd.yaml
+  - prowlarr.yaml
+  - transmission.yaml
+  - httproute.yaml

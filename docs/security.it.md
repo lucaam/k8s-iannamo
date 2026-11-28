@@ -102,6 +102,7 @@ namespace hanno la label `privileged`:
 | `home-assistant` | rete dell'host per il discovery dei dispositivi |
 | `home-assistant-matter-server` | rete dell'host per il discovery di Matter; un post-renderer toglie la modalità privilegiata che il chart imposta sul container |
 | `immich` | il container del server è privilegiato per usare la iGPU (`/dev/dri`) |
+| `media` | gluetun, il sidecar VPN di Transmission, ha bisogno di `NET_ADMIN`; gli altri container girano come uid 1000 senza capability |
 | `zigbee2mqtt` | il container è privilegiato, con `SYS_ADMIN`, per accedere all'adattatore USB |
 | `crd-ns`, `nfs-csi` | nessun motivo: entrambi i namespace sono vuoti |
 

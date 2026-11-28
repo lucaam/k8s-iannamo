@@ -100,6 +100,7 @@ are labelled `privileged`:
 | `home-assistant` | host networking for device discovery |
 | `home-assistant-matter-server` | host networking for Matter discovery; a post-renderer removes the privileged mode that the chart sets on the container |
 | `immich` | the server container is privileged to use the iGPU (`/dev/dri`) |
+| `media` | gluetun, the VPN sidecar of Transmission, needs `NET_ADMIN`; the other containers run as uid 1000 without capabilities |
 | `zigbee2mqtt` | the container is privileged, with `SYS_ADMIN`, to reach the USB adapter |
 | `crd-ns`, `nfs-csi` | no reason: both namespaces are empty |
 

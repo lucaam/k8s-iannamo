@@ -111,6 +111,8 @@ e si conservano fino alla data indicata in `.github/ci/retention.yaml` (vedi
 | `immich` | `immich-library` | `nfs-spacex` | 1T | RWX | Flux |
 | `immich` | `immich-machine-learning-cache`, `immich-valkey` | `nfs-flash` | 20Gi, 1Gi | RWX | Flux |
 | `immich` | `immich-pg-1`, `immich-pg-2` | `nfs-flash` | 32Gi ciascuno | RWO | CloudNativePG |
+| `media` | `media-data` | `nfs-spacex` | 1Ti | RWX | Flux |
+| `media` | `soulsync-config`, `slskd-config`, `prowlarr-config`, `transmission-config` | `nfs-flash` | 5Gi, 2Gi, 1Gi, 1Gi | RWX | Flux |
 | `merlofiorillo-shop` | `mariadb-data` | `nfs-flash` | 10Gi | RWX | Flux |
 | `merlofiorillo-shop` | `wordpress-data` | `nfs-spacex` | 20Gi | RWX | Flux |
 | `mqtt` | `mosquitto-data` | `nfs-spacex` | 1Gi | RWX | chart Helm, con `keep` |

@@ -1,0 +1,200 @@
+# Transmission, the torrent client that SoulSync sends releases to, with all
+# its traffic in a WireGuard tunnel.
+#
+# gluetun runs as a native sidecar (an init container with restartPolicy
+# Always): it starts first, and Transmission starts only once its startup
+# probe reports the tunnel healthy. Both containers share the pod network, and
+# gluetun's firewall drops everything that does not go through the tunnel, so
+# Transmission cannot reach the internet from the home IP even when the
+# tunnel is down (kill switch). Exceptions:
+#   - FIREWALL_INPUT_PORTS: the RPC/web port, for Traefik, SoulSync and Gatus;
+#   - FIREWALL_OUTBOUND_SUBNETS: the pod and Service networks of the cluster
+#     (cluster-cidr and service-cluster-ip-range), so that replies to those
+#     clients and calls to other Services leave through eth0 and not through
+#     the tunnel.
+# DNS goes to gluetun's resolver on 127.0.0.1, which forwards it through the
+# tunnel, so tracker lookups do not leak to the home connection either.
+#
+# The tunnel settings come from gluetun-secret (secret-gluetun.sops.yaml):
+# WIREGUARD_PRIVATE_KEY, WIREGUARD_PUBLIC_KEY, WIREGUARD_ADDRESSES,
+# WIREGUARD_ENDPOINT_IP and WIREGUARD_ENDPOINT_PORT, taken from the provider's
+# wg0.conf. WIREGUARD_ADDRESSES holds the IPv4 address only: the pod network
+# has no IPv6, and gluetun refuses an IPv6 interface address there. For the
+# same reason the whole wg0.conf is not mounted: its values would override the
+# environment.
+#
+# No port forwarding through the VPN: downloads work, seeding to peers that
+# cannot accept connections does not.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transmission
+  namespace: media
+  labels:
+    app.kubernetes.io/name: transmission
+    app.kubernetes.io/part-of: media
+spec:
+  replicas: 1
+  # gluetun leaves its routing rules in the pod network: never two pods with
+  # the same tunnel, and one writer for the Transmission state.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: transmission
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: transmission
+        app.kubernetes.io/part-of: media
+    spec:
+      priorityClassName: homelab-low
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - 127.0.0.1
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: gluetun
+          image: ghcr.io/qdm12/gluetun:v3.41.3@sha256:fa19cc76b2af13d57a8d3dc3066f2ada061b1c761b8aecf989b3877c0486e027
+          restartPolicy: Always
+          # gluetun leaves its policy routing rule (table 51820) in the pod
+          # network when it exits abruptly, and a restarted container then
+          # fails with "adding ip rule 101 ... file exists" and no traffic.
+          # Remove leftovers before starting it. The gluetun wiki suggests a
+          # postStart hook instead, but that hook races with gluetun's own
+          # setup: if it deletes the fresh rule, traffic stops while the
+          # healthcheck still reports healthy.
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              while ip rule del table 51820 2>/dev/null; do :; done;
+              while ip -6 rule del table 51820 2>/dev/null; do :; done;
+              exec /gluetun-entrypoint
+          envFrom:
+            - secretRef:
+                name: gluetun-secret
+          env:
+            - name: TZ
+              value: Europe/Rome
+            - name: VPN_SERVICE_PROVIDER
+              value: custom
+            - name: VPN_TYPE
+              value: wireguard
+            # The Talos kernel has WireGuard built in: no /dev/net/tun needed.
+            - name: WIREGUARD_IMPLEMENTATION
+              value: kernelspace
+            - name: WIREGUARD_ALLOWED_IPS
+              value: 0.0.0.0/0
+            - name: FIREWALL_INPUT_PORTS
+              value: "9091"
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: 10.244.0.0/16,10.96.0.0/12
+            - name: VERSION_INFORMATION
+              value: "off"
+          securityContext:
+            # gluetun runs as root and needs NET_ADMIN for the tunnel, the
+            # routes and the firewall (hence the privileged namespace).
+            allowPrivilegeEscalation: false
+            capabilities:
+              add: ["NET_ADMIN"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          startupProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 6
+      containers:
+        - name: transmission
+          image: ghcr.io/home-operations/transmission:4.1.4@sha256:4d7179443512c84e564e2c8c5e5f17b0db069f63a48eded5f0e371f7429a7463
+          # TRANSMISSION__RPC_USERNAME and TRANSMISSION__RPC_PASSWORD: the
+          # login of the web UI and of the RPC API, for SoulSync.
+          envFrom:
+            - secretRef:
+                name: transmission-secret
+          # The entrypoint writes settings.json from these variables at every
+          # start: settings changed in the web UI last until the next restart.
+          env:
+            - name: TZ
+              value: Europe/Rome
+            - name: TRANSMISSION__RPC_AUTHENTICATION_REQUIRED
+              value: "true"
+            - name: TRANSMISSION__DOWNLOAD_DIR
+              value: /data/downloads/torrents/complete
+            - name: TRANSMISSION__INCOMPLETE_DIR
+              value: /data/downloads/torrents/incomplete
+          ports:
+            - name: http
+              containerPort: 9091
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 30
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 60
+            failureThreshold: 5
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: media
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: transmission-config
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-data
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transmission
+  namespace: media
+  labels:
+    app.kubernetes.io/name: transmission
+    app.kubernetes.io/part-of: media
+spec:
+  selector:
+    app.kubernetes.io/name: transmission
+  ports:
+    - name: http
+      port: 9091
+      targetPort: http

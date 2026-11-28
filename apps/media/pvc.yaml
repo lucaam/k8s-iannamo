@@ -1,0 +1,85 @@
+# Downloads and the music library on one volume (HDD pool), shared by every
+# app of the stack under the same /data paths.
+# Layout, created by the init container of SoulSync:
+#   /data/downloads/soulseek            slskd, completed downloads
+#   /data/downloads/soulseek-incomplete slskd, partial files
+#   /data/downloads/torrents/complete   Transmission, completed downloads
+#   /data/downloads/torrents/incomplete Transmission, partial files
+#   /data/music                         library, filed by SoulSync
+#   /data/staging                       imports waiting for SoulSync
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-data
+  namespace: media
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-spacex
+  resources:
+    requests:
+      storage: 1Ti
+---
+# SoulSync configuration, SQLite databases and its own storage (playlist
+# covers, avatars), as subdirectories config/, data/ and storage/.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: soulsync-config
+  namespace: media
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-flash
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: slskd-config
+  namespace: media
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-flash
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prowlarr-config
+  namespace: media
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-flash
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: transmission-config
+  namespace: media
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-flash
+  resources:
+    requests:
+      storage: 1Gi
