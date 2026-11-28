@@ -69,37 +69,228 @@ spec:
             memory: 3Gi
 
     # ----------------------------------------------------------------
-    # Alertmanager — config completa nel Secret SOPS "alertmanager-config"
-    # (contiene bot_token, chat_id, routing — tutto cifrato)
+    # Default rules of the chart: severity changes and duplicates.
+    # Custom rules are in apps/prometheus/prometheusrule-*.yaml; the
+    # severity policy is at the top of prometheusrule-cluster.yaml.
+    # ----------------------------------------------------------------
+    defaultRules:
+      disabled:
+        # Duplicates of custom rules that also cover the Proxmox host (the
+        # chart rules only select job="node-exporter").
+        NodeFilesystemAlmostOutOfSpace: true
+        NodeClockSkewDetected: true
+        # Every PVC is on NFS: the kubelet reports the free space of the whole
+        # exported dataset, the same for every PVC on it, so one full pool
+        # fired once per PVC. ZfsPoolAlmostFull watches the pools.
+        KubePersistentVolumeFillingUp: true
+        KubePersistentVolumeInodesFillingUp: true
+    customRules:
+      # A node down takes its pods with it. The default rule ignores cordoned
+      # nodes, so drains and Talos upgrades do not fire it.
+      KubeNodeNotReady:
+        severity: critical
+        for: 5m
+      # Node conditions MemoryPressure/DiskPressure/PIDPressure: the kubelet
+      # starts evicting pods (default: info).
+      KubeNodePressure:
+        severity: warning
+      # SLO burn rates of the API server: they fired for days because of the
+      # known etcd latency, with nothing to do about it from a notification.
+      KubeAPIErrorBudgetBurn:
+        severity: info
+      # Capacity planning, not incidents.
+      KubeCPUOvercommit:
+        severity: info
+      KubeMemoryOvercommit:
+        severity: info
+
+    # ----------------------------------------------------------------
+    # Alertmanager
+    # The routing lives here, in plain text; only the Telegram bot token
+    # and chat id are secret, in secret-alertmanager-telegram.sops.yaml,
+    # mounted under /etc/alertmanager/secrets/alertmanager-telegram/.
     # ----------------------------------------------------------------
     alertmanager:
       enabled: true
+      config:
+        global:
+          resolve_timeout: 5m
+        templates:
+          - /etc/alertmanager/config/*.tmpl
+        # Times are UTC (the image may lack a time zone database):
+        # 07:00-22:00 UTC is 08:00-23:00 in Italy in winter, 09:00-00:00 in
+        # summer.
+        time_intervals:
+          - name: waking-hours
+            time_intervals:
+              - times:
+                  - start_time: "07:00"
+                    end_time: "22:00"
+        route:
+          receiver: telegram-warning
+          group_by: [alertname, namespace]
+          group_wait: 1m
+          group_interval: 10m
+          repeat_interval: 24h
+          routes:
+            # Watchdog, InfoInhibitor and RolloutInProgress have severity
+            # "none"; info alerts are context for the Alertmanager UI.
+            - receiver: "null"
+              matchers:
+                - severity =~ "none|info"
+            - receiver: telegram-critical
+              matchers:
+                - severity = "critical"
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 4h
+              routes:
+                # One message for every failing check, whatever namespace.
+                - matchers:
+                    - alertname = "EndpointDown"
+                  group_by: [alertname]
+            # Warnings arrive silently and only in waking hours: a warning
+            # raised at night is sent in the morning if it still fires.
+            - receiver: telegram-warning
+              matchers:
+                - severity = "warning"
+              active_time_intervals: [waking-hours]
+              routes:
+                - matchers:
+                    - alertname = "EndpointDown"
+                  group_by: [alertname]
+                  active_time_intervals: [waking-hours]
+        inhibit_rules:
+          # The critical alert of a pair silences the warning on the same
+          # object (NodeFilesystemAlmostFull, ZfsPoolAlmostFull...). Labels
+          # missing on both sides count as equal.
+          - source_matchers:
+              - severity = "critical"
+            target_matchers:
+              - severity = "warning"
+            equal: [alertname, namespace, instance, pod, persistentvolumeclaim, mountpoint, pool, name]
+          # Update window (prometheusrule-rollouts.yaml): availability alerts
+          # of the namespace being updated wait until the rollout settles.
+          # Never inhibited: KubeDeploymentRolloutStuck,
+          # KubeStatefulSetUpdateNotRolledOut, KubeDaemonSetRolloutStuck,
+          # KubeJobFailed, ContainerOOMKilled: they report a failed update.
+          - source_matchers:
+              - alertname = "RolloutInProgress"
+            target_matchers:
+              - alertname =~ "EndpointDown|TargetDown|KubePodNotReady|KubePodCrashLooping|KubeContainerWaiting|KubeDeploymentReplicasMismatch|KubeDeploymentGenerationMismatch|KubeStatefulSetReplicasMismatch|KubeStatefulSetGenerationMismatch|KubeDaemonSetMisScheduled|KubePdbNotEnoughHealthyPods|KubeHpaReplicasMismatch"
+            equal: [namespace]
+          # Traefik, MetalLB and kube-system (CoreDNS) carry every request:
+          # while they are updated, any health check can fail.
+          - source_matchers:
+              - alertname = "RolloutInProgress"
+              - namespace =~ "traefik|metallb|kube-system"
+            target_matchers:
+              - alertname = "EndpointDown"
+          # kube-state-metrics or Gatus down: AlertSourceDown (critical) says
+          # it, the generic TargetDown would repeat it.
+          - source_matchers:
+              - alertname = "AlertSourceDown"
+            target_matchers:
+              - alertname = "TargetDown"
+            equal: [job]
+        receivers:
+          - name: "null"
+          - name: telegram-critical
+            telegram_configs:
+              - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram/bot_token
+                chat_id_file: /etc/alertmanager/secrets/alertmanager-telegram/chat_id
+                parse_mode: HTML
+                send_resolved: true
+                message: '{{ template "homelab.telegram.message" . }}'
+          - name: telegram-warning
+            telegram_configs:
+              - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram/bot_token
+                chat_id_file: /etc/alertmanager/secrets/alertmanager-telegram/chat_id
+                parse_mode: HTML
+                send_resolved: true
+                disable_notifications: true
+                message: '{{ template "homelab.telegram.message" . }}'
+      # Telegram HTML message. One group = one alertname (and namespace):
+      # header with severity and count, then up to 10 alerts with target,
+      # summary, description and runbook link. Emoji outside the Basic
+      # Multilingual Plane are written as Go escapes ("\U0001F534"): CI
+      # passes the values to helm as JSON, where they would become surrogate
+      # pairs that the YAML parser of helm rejects.
+      templateFiles:
+        telegram.tmpl: |-
+          {{ define "homelab.telegram.target" -}}
+          {{- if eq .Labels.alertname "EndpointDown" }}{{ .Labels.name }}
+          {{- else if .Labels.pod }}{{ .Labels.namespace }}/{{ .Labels.pod }}{{ with .Labels.container }} ({{ . }}){{ end }}
+          {{- else if .Labels.deployment }}{{ .Labels.namespace }}/{{ .Labels.deployment }}
+          {{- else if .Labels.statefulset }}{{ .Labels.namespace }}/{{ .Labels.statefulset }}
+          {{- else if .Labels.daemonset }}{{ .Labels.namespace }}/{{ .Labels.daemonset }}
+          {{- else if .Labels.job_name }}{{ .Labels.namespace }}/{{ .Labels.job_name }}
+          {{- else if .Labels.persistentvolumeclaim }}{{ .Labels.namespace }}/{{ .Labels.persistentvolumeclaim }}
+          {{- else if .Labels.name }}{{ .Labels.namespace }}/{{ .Labels.name }}
+          {{- else if .Labels.pool }}pool {{ .Labels.pool }}
+          {{- else if .Labels.node }}{{ .Labels.node }}
+          {{- else if .Labels.mountpoint }}{{ .Labels.instance }} {{ .Labels.mountpoint }}
+          {{- else if .Labels.instance }}{{ .Labels.instance }}
+          {{- else if .Labels.job }}{{ .Labels.job }}
+          {{- else }}{{ .Labels.namespace }}
+          {{- end }}
+          {{- end }}
+
+          {{ define "homelab.telegram.alert" -}}
+          • <code>{{ template "homelab.telegram.target" . }}</code>
+          {{- with .Annotations.summary }}
+          {{ . | html }}{{ end }}
+          {{- with .Annotations.description }}
+          <i>{{ reReplaceAll " on cluster \\." "." . | html }}</i>{{ end }}
+          {{- with .Annotations.runbook_url }}
+          <a href="{{ . }}">runbook</a>{{ end }}
+          {{- end }}
+
+          {{ define "homelab.telegram.message" -}}
+          {{- $firing := len .Alerts.Firing -}}
+          {{- if eq .Status "firing" -}}
+          {{ if eq .CommonLabels.severity "critical" }}{{ "\U0001F534" }} CRITICAL{{ else if eq .CommonLabels.severity "warning" }}{{ "\U0001F7E0" }} WARNING{{ else }}{{ "\U0001F535" }} {{ .CommonLabels.severity | toUpper }}{{ end }} · <b>{{ .CommonLabels.alertname }}</b>{{ if gt $firing 1 }} ({{ $firing }}){{ end }}
+          {{ range $i, $a := .Alerts.Firing }}{{ if lt $i 10 }}
+          {{ template "homelab.telegram.alert" $a }}
+          {{ end }}{{ end }}
+          {{- if gt $firing 10 }}
+          … {{ $firing }} in total, the rest in Alertmanager.
+          {{ end }}
+          {{- if .Alerts.Resolved }}
+          ✅ Resolved meanwhile:{{ range .Alerts.Resolved }} <code>{{ template "homelab.telegram.target" . }}</code>{{ end }}
+          {{- end }}
+          {{- else -}}
+          ✅ RESOLVED · <b>{{ .CommonLabels.alertname }}</b>
+          {{ range $i, $a := .Alerts.Resolved }}{{ if lt $i 10 }}
+          • <code>{{ template "homelab.telegram.target" $a }}</code>{{ end }}{{ end }}
+          {{- end }}
+          {{- end }}
       alertmanagerSpec:
-        # L'intera configurazione Alertmanager viene dal Secret
-        # "alertmanager-config" (chiave: alertmanager.yaml).
-        configSecret: alertmanager-config
+        # Mounted read-only under /etc/alertmanager/secrets/<name>/<key>.
+        secrets:
+          - alertmanager-telegram
 
         # Dead man's switch: prepared, NOT enabled.
-        # Watchdog fires all the time and the secret routes it to the "null"
-        # receiver, so nothing notices when Prometheus, Alertmanager or the
-        # whole cluster stop. To enable it, create an external check first
-        # (for example on healthchecks.io: period 1 minute, grace 10 minutes,
-        # notifications to Telegram or e-mail), then edit
-        # secret-alertmanager-config.sops.yaml with sops and, inside
-        # alertmanager.yaml:
-        # 1. add this route as the first entry of route.routes (the existing
-        #    "null" route still catches InfoInhibitor):
+        # Watchdog fires all the time and is routed to the "null" receiver,
+        # so nothing notices when the whole cluster stops (Gatus only covers
+        # Prometheus or Alertmanager stopping while the cluster runs). To
+        # enable it, create an external check first (for example on
+        # healthchecks.io: period 1 minute, grace 10 minutes, notifications
+        # to Telegram or e-mail), then:
+        # 1. add the ping URL as key "heartbeat_url" to
+        #    secret-alertmanager-telegram.sops.yaml (it is a credential, it
+        #    never goes in this file);
+        # 2. add this route as the first entry of config.route.routes:
         #      - receiver: heartbeat
         #        matchers:
-        #          - alertname="Watchdog"
+        #          - alertname = "Watchdog"
         #        group_wait: 0s
         #        group_interval: 1m
         #        repeat_interval: 1m
-        # 2. add the receiver; the ping URL is a credential, so it only goes
-        #    into the encrypted secret, never in this file:
+        # 3. add the receiver:
         #      - name: heartbeat
         #        webhook_configs:
-        #          - url: "https://hc-ping.com/<CHECK-UUID>"
+        #          - url_file: /etc/alertmanager/secrets/alertmanager-telegram/heartbeat_url
         #            send_resolved: false
 
         retention: 168h  # 7 giorni di storia notifiche

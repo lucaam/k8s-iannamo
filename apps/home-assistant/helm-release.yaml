@@ -321,8 +321,12 @@ spec:
     #   port: http
 
     serviceMonitor:
-      # requires HA integration:  https://www.home-assistant.io/integrations/prometheus/
-      enabled: true
+      # Off: /api/prometheus answers 404 because the Prometheus integration
+      # (https://www.home-assistant.io/integrations/prometheus/) is not
+      # enabled in Home Assistant, so TargetDown fired permanently. Enable
+      # the integration and a long-lived token (bearerToken below) first,
+      # then set this back to true.
+      enabled: false
       scrapeInterval: 30s
       scrapeTimeout: 10s
       path: /api/prometheus

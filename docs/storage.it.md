@@ -166,6 +166,8 @@ zfs_pool_allocated_bytes / zfs_pool_size_bytes
 zpool list flash spacex
 ```
 
-Gli alert `ZfsPoolNearFull` e `ZfsPoolCritical` scattano oltre l'80% e il 90%.
-Gli alert `PvcAlmostFull` leggono le statistiche dei volumi del kubelet, che
-per un volume NFS descrivono l'intero export, non la singola directory.
+`ZfsPoolAlmostFull` scatta come warning oltre l'80% e come critical oltre il
+90%. Non ci sono alert sul riempimento dei PVC: le statistiche dei volumi del
+kubelet, per un volume NFS, descrivono l'intero export e non la singola
+directory, quindi scattavano insieme tutti i PVC di un pool. Vedi
+[Monitoraggio](monitoring.md#alert-rules).
