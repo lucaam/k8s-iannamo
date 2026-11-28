@@ -108,7 +108,7 @@ data:
           - "[CERTIFICATE_EXPIRATION] > 336h"
           - "[RESPONSE_TIME] < 4000"
         extra-labels:
-          severity: "warning"
+          severity: "critical"
           target_namespace: "immich"
 
       # The shop has its own certificate, not the wildcard one. WordPress
@@ -255,7 +255,7 @@ data:
           - "[STATUS] == 200"
           - "[RESPONSE_TIME] < 2000"
         extra-labels:
-          severity: "warning"
+          severity: "critical"
           target_namespace: "immich"
 
       - name: "Immich Machine Learning"
@@ -275,7 +275,7 @@ data:
         conditions:
           - "[CONNECTED] == true"
         extra-labels:
-          severity: "warning"
+          severity: "critical"
           target_namespace: "immich"
 
       - name: "Immich Valkey (Redis)"
@@ -285,7 +285,7 @@ data:
         conditions:
           - "[CONNECTED] == true"
         extra-labels:
-          severity: "warning"
+          severity: "critical"
           target_namespace: "immich"
 
       # ========================================

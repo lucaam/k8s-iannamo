@@ -58,7 +58,7 @@ Telegram:
 
 | Severity | Significato | Telegram |
 |---|---|---|
-| `critical` | utenti o dati colpiti adesso: un nodo, il percorso di ingresso, Home Assistant, Authentik, il negozio, un pool ZFS | con suono, a qualsiasi ora; ripetuto ogni 4 ore |
+| `critical` | utenti o dati colpiti adesso: un nodo, il percorso di ingresso, Home Assistant, Authentik, Immich, il negozio, un pool ZFS | con suono, a qualsiasi ora; ripetuto ogni 4 ore |
 | `warning` | degrado da sistemare entro un giorno: crash loop, job falliti, OOM kill, certificati in scadenza, controlli interni | silenzioso, solo 07:00-22:00 UTC (08:00-23:00 in Italia d'inverno); un warning nato di notte arriva al mattino se è ancora attivo; ripetuto ogni 24 ore |
 | `info` | contesto: uso della CPU, throttling, burn degli SLO dell'API server, overcommit | nessuna notifica, solo nella UI di Alertmanager |
 | `none` | `Watchdog`, `InfoInhibitor`, `RolloutInProgress` | nessuna notifica |
@@ -170,11 +170,11 @@ condizione sbagliata, poi corretta.
 
 | Gruppo | Controlli | Severity |
 |---|---|---|
-| Public Services | Authentik, Gatus, Home Assistant, Immich e il negozio Merlo Fiorillo passando da Traefik: stato 200, tempo di risposta, certificato valido per più di 14 giorni. Per il negozio va bene anche il 302 verso l'installer che restituisce un WordPress vuoto | `critical`; Gatus e Immich `warning` |
+| Public Services | Authentik, Gatus, Home Assistant, Immich e il negozio Merlo Fiorillo passando da Traefik: stato 200, tempo di risposta, certificato valido per più di 14 giorni. Per il negozio va bene anche il 302 verso l'installer che restituisce un WordPress vuoto | `critical`; Gatus `warning` |
 | Gateway | Service di Traefik e indirizzo MetalLB: entrambi devono rispondere `301` (da HTTP a HTTPS) | `critical` |
 | Auth | server di Authentik, outpost integrato (`/outpost.goauthentik.io/ping`), porta di PostgreSQL | `critical`; outpost `warning` |
 | Home Automation | Home Assistant, Mosquitto, Zigbee2MQTT e un pannello LED in LAN | `critical`; pannello LED `info` |
-| Immich | server, machine learning, PostgreSQL, Valkey | `warning` |
+| Immich | server, machine learning, PostgreSQL, Valkey | `critical`; machine learning `warning` (si fermano ricerca e volti, foto e upload funzionano) |
 | Merlo Fiorillo Shop | porta di MariaDB | `critical` |
 | Cluster Core | CoreDNS | `critical` |
 | Infrastructure | cert-manager e il suo webhook, webhook di MetalLB, webhook di CloudNativePG | `warning` |

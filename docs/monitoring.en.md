@@ -58,7 +58,7 @@ reaches Telegram:
 
 | Severity | Meaning | Telegram |
 |---|---|---|
-| `critical` | users or data are affected now: a node, an ingress path, Home Assistant, Authentik, the shop, a ZFS pool | with sound, at any hour; repeated every 4 hours |
+| `critical` | users or data are affected now: a node, an ingress path, Home Assistant, Authentik, Immich, the shop, a ZFS pool | with sound, at any hour; repeated every 4 hours |
 | `warning` | degraded, to fix within a day: crash loops, failed jobs, OOM kills, expiring certificates, internal checks | silent, only 07:00-22:00 UTC (08:00-23:00 in Italy in winter); a warning raised at night arrives in the morning if it still fires; repeated every 24 hours |
 | `info` | context: CPU usage, throttling, API server SLO burn, overcommit | none, Alertmanager UI only |
 | `none` | `Watchdog`, `InfoInhibitor`, `RolloutInProgress` | none |
@@ -165,11 +165,11 @@ has since been fixed.
 
 | Group | Checks | Severity |
 |---|---|---|
-| Public Services | Authentik, Gatus, Home Assistant, Immich and the Merlo Fiorillo shop through Traefik: status 200, response time, certificate valid for more than 14 days. The shop also accepts the 302 to the installer that an empty WordPress returns | `critical`; Gatus and Immich `warning` |
+| Public Services | Authentik, Gatus, Home Assistant, Immich and the Merlo Fiorillo shop through Traefik: status 200, response time, certificate valid for more than 14 days. The shop also accepts the 302 to the installer that an empty WordPress returns | `critical`; Gatus `warning` |
 | Gateway | Traefik Service and MetalLB address: both must answer `301` (HTTP to HTTPS) | `critical` |
 | Auth | Authentik server, embedded outpost (`/outpost.goauthentik.io/ping`), PostgreSQL port | `critical`; outpost `warning` |
 | Home Automation | Home Assistant, Mosquitto, Zigbee2MQTT and a LED panel on the LAN | `critical`; LED panel `info` |
-| Immich | server, machine learning, PostgreSQL, Valkey | `warning` |
+| Immich | server, machine learning, PostgreSQL, Valkey | `critical`; machine learning `warning` (search and faces stop, photos and uploads work) |
 | Merlo Fiorillo Shop | MariaDB port | `critical` |
 | Cluster Core | CoreDNS | `critical` |
 | Infrastructure | cert-manager and its webhook, MetalLB webhook, CloudNativePG webhook | `warning` |
