@@ -24,6 +24,7 @@ repeat version numbers.
 | [External services](#external-services) | `external-services` | `homelab.${DOMAIN}` | Authentik forward auth |
 | [TREK](#trek) | `trek` | `trek.${DOMAIN}` | Authentik OIDC |
 | [social-media-reuploader](#social-media-reuploader) | `social-media-reuploader` | `social-media-reuploader.${DOMAIN}` | OAuth |
+| [Merlo Fiorillo shop](#merlofiorillo-shop) | `merlofiorillo-shop` | `shop.merlofiorillo.it` | WordPress |
 | [SoulSync](#music) | `media` | `soulsync.${DOMAIN}` | Authentik forward auth, then its own |
 | [slskd](#music) | `media` | `slskd.${DOMAIN}` | Authentik forward auth, then its own |
 | [Prowlarr](#music) | `media` | `prowlarr.${DOMAIN}` | Authentik forward auth, then its own |
@@ -243,6 +244,31 @@ and a hand-written `Endpoints` object point Traefik at that host.
 - Upgrades use client-side apply (`upgrade.serverSideApply: disabled`): the
   bot Deployment uses the Recreate strategy, which server-side apply cannot
   switch to from the defaulted RollingUpdate.
+
+### Merlo Fiorillo shop { #merlofiorillo-shop }
+
+- WordPress with WooCommerce at `shop.merlofiorillo.it`. The name is in the
+  separate `merlofiorillo.it` zone, so it has its own certificate and its own
+  Gateway listener (see [Networking](networking.md#traefik-and-the-gateway-api)).
+  Its DNS record is not proxied by Cloudflare: it points at the home address
+  through `ddns.merlofiorillo.it`.
+- Chart `wordpress` from `groundhog2k.github.io/helm-charts` with the official
+  `wordpress` image; MariaDB is a StatefulSet in `database.yaml`. Both pods run
+  as non-root users with a read-only root filesystem, and the namespace
+  enforces the `restricted` Pod Security level.
+- The database password comes from the SOPS Secret `wordpress-secrets`.
+  `wp-config.php` is the template of the official image, which reads the
+  database settings from the environment. The restored site keeps its own
+  copy of that template, with its original salts, and still takes the
+  credentials from the Secret.
+- Data: the WordPress files on `wordpress-data` (`nfs-spacex`), the database
+  on `mariadb-data` (`nfs-flash`).
+- The HTTPRoute answers 403 to `/wp-admin/install.php` and
+  `/wp-admin/setup-config.php`: while the database is empty, anyone reaching
+  the installer could create the first administrator. A fresh install goes
+  through `kubectl port-forward`.
+- As on every route of the `websecure` entry point, Traefik replaces the
+  bodies of the 404, 500 and 503 responses with its own error pages.
 
 ## Disabled and retired applications { #disabled }
 

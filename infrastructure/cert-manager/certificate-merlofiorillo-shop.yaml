@@ -1,0 +1,16 @@
+# merlofiorillo.it is a separate Cloudflare zone, outside the wildcard
+# certificate. The cloudflare ClusterIssuer solves DNS-01 there too: its API
+# token has access to the zone. The Secret lives in the traefik namespace,
+# next to the Gateway listener that uses it.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: merlofiorillo-shop
+  namespace: traefik
+spec:
+  secretName: merlofiorillo-shop-tls
+  issuerRef:
+    name: cloudflare
+    kind: ClusterIssuer
+  dnsNames:
+    - shop.merlofiorillo.it

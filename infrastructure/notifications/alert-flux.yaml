@@ -6,18 +6,42 @@ metadata:
 spec:
   providerRef:
     name: telegram
-  # info | error
+  # info | error. Only errors: a failed reconciliation is what tells an
+  # update went wrong, while Alertmanager holds back the availability alerts
+  # of the namespace being updated (apps/prometheus/prometheusrule-rollouts.yaml).
   eventSeverity: error
+  # An event source without a namespace only matches objects in the Alert
+  # namespace (flux-system), and the namespace takes no wildcard: the
+  # HelmReleases live in the namespaces of their apps and were never matched.
+  # Add the namespace of every new HelmRelease here.
   eventSources:
     - kind: GitRepository
       name: "*"
-    - kind: Kustomization
+    - kind: OCIRepository
       name: "*"
     - kind: HelmRepository
       name: "*"
-    - kind: HelmRelease
+    - kind: HelmChart
       name: "*"
-  # Riduci rumore: ignora eventi Normal di routine
+    - kind: Kustomization
+      name: "*"
+    - {kind: HelmRelease, name: "*", namespace: authentik}
+    - {kind: HelmRelease, name: "*", namespace: cert-manager}
+    - {kind: HelmRelease, name: "*", namespace: gatus}
+    - {kind: HelmRelease, name: "*", namespace: grafana}
+    - {kind: HelmRelease, name: "*", namespace: home-assistant}
+    - {kind: HelmRelease, name: "*", namespace: home-assistant-matter-server}
+    - {kind: HelmRelease, name: "*", namespace: immich}
+    - {kind: HelmRelease, name: "*", namespace: kube-system}
+    - {kind: HelmRelease, name: "*", namespace: merlofiorillo-shop}
+    - {kind: HelmRelease, name: "*", namespace: metallb}
+    - {kind: HelmRelease, name: "*", namespace: mqtt}
+    - {kind: HelmRelease, name: "*", namespace: prometheus}
+    - {kind: HelmRelease, name: "*", namespace: social-media-reuploader}
+    - {kind: HelmRelease, name: "*", namespace: traefik}
+    - {kind: HelmRelease, name: "*", namespace: trek}
+    - {kind: HelmRelease, name: "*", namespace: zigbee2mqtt}
+  # Drop routine noise
   exclusionList:
     - "waiting.*retrying"
     - "Health check passed"

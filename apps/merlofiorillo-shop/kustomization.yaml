@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - secret-wordpress.sops.yaml
+  - pvc.yaml
+  - database.yaml
+  - helm-repository.yaml
+  - helm-release.yaml
+  - middleware-block-installer.yaml
+  - httproute.yaml

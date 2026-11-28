@@ -16,85 +16,51 @@ spec:
     # ZfsScrubOverdue (zfs_pool_scrub_last_finish_seconds) were removed:
     # they had 0 series and could never fire. Add them back together with a
     # collector on the host that exports those metrics.
+    # A down exporter raises the chart's TargetDown (warning).
     # ------------------------------------------------------------------
     - name: zfs.proxmox
       rules:
-        - alert: ZfsExporterDown
-          expr: up{job="proxmox-zfs-exporter"} == 0
-          for: 5m
-          labels:
-            severity: critical
-          annotations:
-            summary: "ZFS exporter su Proxmox non risponde"
-            description: "L'exporter su 192.168.178.162:9134 è down da oltre 5m. Niente visibilità sui pool ZFS."
-
         - alert: ZfsPoolNotHealthy
-          # 0 = ONLINE; qualsiasi altro valore = DEGRADED/FAULTED/UNAVAIL
+          # 0 = ONLINE; any other value = DEGRADED/FAULTED/UNAVAIL
           expr: zfs_pool_health != 0
           for: 2m
           labels:
             severity: critical
           annotations:
-            summary: "Pool ZFS {{ $labels.pool }} non in stato ONLINE"
-            description: "Stato corrente: {{ $value }}. Controllare `zpool status` su Proxmox."
+            summary: "ZFS pool {{ $labels.pool }} is not ONLINE"
+            description: "Health value: {{ $value }}. Run `zpool status {{ $labels.pool }}` on Proxmox."
 
-        - alert: ZfsPoolNearFull
-          expr: (zfs_pool_allocated_bytes / zfs_pool_size_bytes) > 0.80
+        - alert: ZfsPoolAlmostFull
+          expr: zfs_pool_allocated_bytes / zfs_pool_size_bytes > 0.80
           for: 30m
           labels:
             severity: warning
           annotations:
-            summary: "Pool ZFS {{ $labels.pool }} oltre l'80% di occupazione"
-            description: "Uso attuale: {{ $value | humanizePercentage }}. Pianificare cleanup o espansione."
+            summary: "ZFS pool {{ $labels.pool }} is more than 80% full"
+            description: "Used: {{ $value | humanizePercentage }}. Plan a cleanup or an expansion."
 
-        - alert: ZfsPoolCritical
-          expr: (zfs_pool_allocated_bytes / zfs_pool_size_bytes) > 0.90
+        - alert: ZfsPoolAlmostFull
+          expr: zfs_pool_allocated_bytes / zfs_pool_size_bytes > 0.90
           for: 10m
           labels:
             severity: critical
           annotations:
-            summary: "Pool ZFS {{ $labels.pool }} oltre il 90% — rischio imminente"
-            description: "Uso attuale: {{ $value | humanizePercentage }}. ZFS degrada bruscamente sopra il 90%."
+            summary: "ZFS pool {{ $labels.pool }} is more than 90% full"
+            description: "Used: {{ $value | humanizePercentage }}. ZFS performance drops sharply above 90%."
 
     # ------------------------------------------------------------------
-    # PVC riempimento (visto dal kubelet)
+    # No PVC fill alerts. Every PVC is on NFS (nfs-flash, nfs-spacex) and
+    # the kubelet reports the free space of the whole exported dataset, the
+    # same number for every PVC on it: one full pool raised one alert per PVC
+    # on top of ZfsPoolAlmostFull. PvcAlmostFull, PvcCritical and
+    # PvcInodesAlmostFull were removed, and the chart's
+    # KubePersistentVolumeFillingUp and KubePersistentVolumeInodesFillingUp
+    # are disabled in the values. Add them back for a storage class with
+    # per-volume quotas.
     # ------------------------------------------------------------------
-    - name: pvc.fill
-      rules:
-        - alert: PvcAlmostFull
-          expr: |
-            (kubelet_volume_stats_available_bytes
-              / kubelet_volume_stats_capacity_bytes) < 0.15
-          for: 15m
-          labels:
-            severity: warning
-          annotations:
-            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} sotto il 15% libero"
-            description: "Spazio libero: {{ $value | humanizePercentage }}."
-
-        - alert: PvcCritical
-          expr: |
-            (kubelet_volume_stats_available_bytes
-              / kubelet_volume_stats_capacity_bytes) < 0.05
-          for: 5m
-          labels:
-            severity: critical
-          annotations:
-            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} quasi pieno"
-            description: "Spazio libero: {{ $value | humanizePercentage }}. Rischio crash dell'applicazione."
-
-        - alert: PvcInodesAlmostFull
-          expr: |
-            (kubelet_volume_stats_inodes_free
-              / kubelet_volume_stats_inodes) < 0.10
-          for: 30m
-          labels:
-            severity: warning
-          annotations:
-            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} sotto il 10% di inode liberi"
 
     # ------------------------------------------------------------------
-    # NFS client su nodi Talos — montaggi verso Proxmox
+    # NFS client on the Talos nodes, mounts from Proxmox
     # ------------------------------------------------------------------
     - name: nfs.client
       rules:
@@ -102,17 +68,19 @@ spec:
           # node_nfs_requests_total has no status label, so the old selector
           # {status="timeout"} matched 0 series. The NFS client retransmits an
           # RPC each time a request times out: count the retransmissions.
+          # Warning: slow storage is a symptom; NfsServerUnreachable is the
+          # outage.
           expr: increase(node_nfs_rpc_retransmissions_total[10m]) > 0
           for: 10m
           labels:
-            severity: critical
+            severity: warning
           annotations:
-            summary: "Timeout NFS sul nodo {{ $labels.instance }}"
-            description: "Il client NFS sta sperimentando timeout — verifica raggiungibilità di 192.168.178.162 e stato del server NFS."
+            summary: "NFS timeouts on {{ $labels.instance }}"
+            description: "The NFS client keeps retransmitting requests. Check 192.168.178.162 and the NFS server."
 
         - alert: NfsServerUnreachable
-          # Tutti i nodi con NFS mount hanno traffico zero per 30m,
-          # ma ne avevano nell'ultima ora — stallo globale
+          # Every node with NFS mounts had traffic in the last hour and none
+          # for 30 minutes: a global stall.
           # sum() instead of count(... > 0) == 0: count() of an empty vector
           # returns no sample rather than 0, so the old condition never matched.
           expr: |
@@ -122,5 +90,5 @@ spec:
           labels:
             severity: critical
           annotations:
-            summary: "Traffico NFS azzerato su tutti i nodi"
-            description: "Nessun nodo ha traffico NFS da 30m. Verificare raggiungibilità di 192.168.178.162 e stato del server NFS."
+            summary: "No NFS traffic from any node"
+            description: "No node has sent NFS requests for 30 minutes. Check 192.168.178.162 and the NFS server."

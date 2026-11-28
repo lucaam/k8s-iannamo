@@ -112,6 +112,8 @@ are kept until the date in `.github/ci/retention.yaml` (see
 | `immich` | `immich-pg-1`, `immich-pg-2` | `nfs-flash` | 32Gi each | RWO | CloudNativePG |
 | `media` | `media-data` | `nfs-spacex` | 1Ti | RWX | Flux |
 | `media` | `soulsync-config`, `slskd-config`, `prowlarr-config`, `transmission-config` | `nfs-flash` | 5Gi, 2Gi, 1Gi, 1Gi | RWX | Flux |
+| `merlofiorillo-shop` | `mariadb-data` | `nfs-flash` | 10Gi | RWX | Flux |
+| `merlofiorillo-shop` | `wordpress-data` | `nfs-spacex` | 20Gi | RWX | Flux |
 | `mqtt` | `mosquitto-data` | `nfs-spacex` | 1Gi | RWX | Helm chart, with `keep` |
 | `prometheus` | Prometheus and Alertmanager data | `nfs-flash` | 20Gi, 2Gi | RWO | StatefulSet (operator) |
 | `social-media-reuploader` | `social-media-reuploader-data` | `nfs-flash` | 1Gi | RWO | Helm chart, with `keep` |
@@ -127,6 +129,7 @@ are kept until the date in `.github/ci/retention.yaml` (see
   failure of a PostgreSQL instance, not of the node or of the pool, and it
   doubles the writes on `flash`.
 - **Authentik** uses the PostgreSQL bundled with its chart, a single pod.
+- **MariaDB** for the Merlo Fiorillo shop, a single pod (StatefulSet).
 - **SQLite** files on NFS: Gatus, Grafana and the Home Assistant recorder.
 - **Prometheus** keeps its time series database on NFS, which Prometheus
   reports as an unsupported filesystem at startup.
@@ -163,6 +166,7 @@ zfs_pool_allocated_bytes / zfs_pool_size_bytes
 zpool list flash spacex
 ```
 
-The `ZfsPoolNearFull` and `ZfsPoolCritical` alerts fire above 80% and 90%. The
-`PvcAlmostFull` alerts read the kubelet volume statistics, which for an NFS
-volume describe the whole export, not the single directory.
+`ZfsPoolAlmostFull` fires as a warning above 80% and as critical above 90%.
+There are no PVC fill alerts: the kubelet volume statistics of an NFS volume
+describe the whole export, not the single directory, so every PVC on a pool
+fired at once. See [Monitoring](monitoring.md#alert-rules).

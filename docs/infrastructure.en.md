@@ -81,7 +81,16 @@ bursts.
   `*.${DOMAIN}` and `*.home.${DOMAIN}` and is stored in the Secret
   `wildcard-apps-tls`, used by the Gateway and by the default Traefik TLS
   store.
-- cert-manager renews it 30 days before expiry. The `CertManagerCert*` alerts
+- The Certificate `merlofiorillo-shop`, also in `traefik`, covers
+  `shop.merlofiorillo.it`, in the separate `merlofiorillo.it` zone that the
+  same API token can edit. Its Secret `merlofiorillo-shop-tls` is used by the
+  Gateway listener `websecure-merlofiorillo-shop` only.
+- The DNS-01 self check queries Cloudflare and Google over DNS-over-HTTPS
+  (`dns01RecursiveNameservers`, `dns01RecursiveNameserversOnly`). On the home
+  network port 53 is intercepted by a caching resolver: queries meant for the
+  authoritative nameservers got the cached NXDOMAIN of the first check, and a
+  challenge waited up to the zone's 30-minute negative TTL.
+- cert-manager renews both 30 days before expiry. The `CertManagerCert*` alerts
   and the Gatus checks fire when less than 14 days are left, that is when the
   renewal is stuck.
 

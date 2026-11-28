@@ -46,6 +46,12 @@ One Gateway, `traefik/traefik-gateway` (class `traefik`), defined in
 |---|---|---|---|---|
 | `web` | 8000 | 80 | HTTP | – (redirected to HTTPS) |
 | `websecure` | 8443 | 443 | HTTPS | Secret `wildcard-apps-tls` |
+| `websecure-merlofiorillo-shop` | 8443 | 443 | HTTPS, `shop.merlofiorillo.it` only | Secret `merlofiorillo-shop-tls` |
+
+`websecure-merlofiorillo-shop` accepts routes from the `merlofiorillo-shop`
+namespace only. Its certificate stays off `websecure` because Traefik drops
+a listener whose certificate cannot be loaded: a failed issuance for the shop
+leaves every other route up.
 
 !!! note "Two definitions of the same Gateway"
     The Traefik chart renders a Gateway with the same name, with only the
@@ -113,6 +119,7 @@ spec:
 | `traefik.${DOMAIN}` | IngressRoute of the Traefik chart | forward auth |
 | `trek.${DOMAIN}` | `trek/trek` | OIDC |
 | `social-media-reuploader.${DOMAIN}` | `social-media-reuploader/social-media-reuploader-gui` | OAuth |
+| `shop.merlofiorillo.it` | `merlofiorillo-shop/wordpress`, on `websecure-merlofiorillo-shop` | WordPress login; installer blocked |
 | `soulsync.${DOMAIN}` | `media/soulsync` | forward auth |
 | `slskd.${DOMAIN}` | `media/slskd` | forward auth |
 | `prowlarr.${DOMAIN}` | `media/prowlarr` | forward auth |
@@ -122,6 +129,7 @@ spec:
 
 The wildcard certificate covers `*.${DOMAIN}` and `*.home.${DOMAIN}` only:
 other names, such as `immich.lan`, get a certificate that does not match them.
+`shop.merlofiorillo.it` has its own certificate, on its own listener.
 
 ## Forward authentication { #forward-auth }
 

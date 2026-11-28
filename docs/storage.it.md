@@ -113,6 +113,8 @@ e si conservano fino alla data indicata in `.github/ci/retention.yaml` (vedi
 | `immich` | `immich-pg-1`, `immich-pg-2` | `nfs-flash` | 32Gi ciascuno | RWO | CloudNativePG |
 | `media` | `media-data` | `nfs-spacex` | 1Ti | RWX | Flux |
 | `media` | `soulsync-config`, `slskd-config`, `prowlarr-config`, `transmission-config` | `nfs-flash` | 5Gi, 2Gi, 1Gi, 1Gi | RWX | Flux |
+| `merlofiorillo-shop` | `mariadb-data` | `nfs-flash` | 10Gi | RWX | Flux |
+| `merlofiorillo-shop` | `wordpress-data` | `nfs-spacex` | 20Gi | RWX | Flux |
 | `mqtt` | `mosquitto-data` | `nfs-spacex` | 1Gi | RWX | chart Helm, con `keep` |
 | `prometheus` | dati di Prometheus e Alertmanager | `nfs-flash` | 20Gi, 2Gi | RWO | StatefulSet (operatore) |
 | `social-media-reuploader` | `social-media-reuploader-data` | `nfs-flash` | 1Gi | RWO | chart Helm, con `keep` |
@@ -128,6 +130,7 @@ e si conservano fino alla data indicata in `.github/ci/retention.yaml` (vedi
   il guasto di un'istanza PostgreSQL, non quello del nodo o del pool, e
   raddoppia le scritture su `flash`.
 - **Authentik** usa il PostgreSQL incluso nel suo chart, un solo pod.
+- **MariaDB** per il negozio Merlo Fiorillo, un solo pod (StatefulSet).
 - **File SQLite** su NFS: Gatus, Grafana e il recorder di Home Assistant.
 - **Prometheus** tiene il database delle serie temporali su NFS, che
   Prometheus stesso segnala all'avvio come filesystem non supportato.
@@ -165,6 +168,8 @@ zfs_pool_allocated_bytes / zfs_pool_size_bytes
 zpool list flash spacex
 ```
 
-Gli alert `ZfsPoolNearFull` e `ZfsPoolCritical` scattano oltre l'80% e il 90%.
-Gli alert `PvcAlmostFull` leggono le statistiche dei volumi del kubelet, che
-per un volume NFS descrivono l'intero export, non la singola directory.
+`ZfsPoolAlmostFull` scatta come warning oltre l'80% e come critical oltre il
+90%. Non ci sono alert sul riempimento dei PVC: le statistiche dei volumi del
+kubelet, per un volume NFS, descrivono l'intero export e non la singola
+directory, quindi scattavano insieme tutti i PVC di un pool. Vedi
+[Monitoraggio](monitoring.md#alert-rules).
