@@ -133,6 +133,13 @@ spec:
               kubernetes.io/hostname: talos-homelab-worker-1
           containers:
             main:
+              # Workaround for immich-app/immich#33466: in v3.4.2 the metrics
+              # listeners (8081, 8082) answer 400 to every request when
+              # IMMICH_HOST is unset (default "::"), so Prometheus sees the
+              # targets down. The cluster is IPv4 single-stack, so binding to
+              # 0.0.0.0 changes nothing else. Drop it once a release ships the fix.
+              env:
+                IMMICH_HOST: "0.0.0.0"
               image:
                 repository: ghcr.io/immich-app/immich-server
                 tag: v3.4.2@sha256:fc880c1bf665b4aab1e74c15e56ab871225989cd546536e6b77e771869af06bd
