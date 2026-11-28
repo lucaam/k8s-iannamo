@@ -13,13 +13,16 @@ spec:
         kind: HelmRepository
         name: prometheus-community
         namespace: flux-system
-  # Upgrade strategy: ricreare le risorse se cambiano i selector
-  # (necessario per StatefulSet di Prometheus/Alertmanager se modifichiamo storage)
+  # CRDs follow the chart: the prometheus-operator CRDs must match the
+  # operator version. With Skip they had stayed at 0.82.2 while the operator
+  # moved to 0.94. CreateReplace updates them on every chart upgrade; Helm
+  # never deletes CRDs, so the objects (ServiceMonitors, PrometheusRules...)
+  # are kept.
   install:
-    crds: Skip
+    crds: CreateReplace
     timeout: 10m
   upgrade:
-    crds: Skip
+    crds: CreateReplace
     timeout: 10m
     remediation:
       retries: 3
