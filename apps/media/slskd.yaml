@@ -46,6 +46,30 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        # slskd exits ("Invalid configuration: ... non-existent directory")
+        # when its download directories are missing, as on an empty
+        # media-data volume before the init container of SoulSync has run.
+        - name: init-dirs
+          image: docker.io/slskd/slskd:0.26.2@sha256:d0963a3e5b16facd295bf4f2156dad0182f246b1b21a032cae12f5494c694843
+          command:
+            - mkdir
+            - -p
+            - /data/downloads/soulseek
+            - /data/downloads/soulseek-incomplete
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: media
+              mountPath: /data
       containers:
         - name: slskd
           image: docker.io/slskd/slskd:0.26.2@sha256:d0963a3e5b16facd295bf4f2156dad0182f246b1b21a032cae12f5494c694843
