@@ -24,6 +24,7 @@ non ripete i numeri di versione.
 | [Servizi esterni](#external-services) | `external-services` | `homelab.${DOMAIN}` | forward auth di Authentik |
 | [TREK](#trek) | `trek` | `trek.${DOMAIN}` | OIDC di Authentik |
 | [social-media-reuploader](#social-media-reuploader) | `social-media-reuploader` | `social-media-reuploader.${DOMAIN}` | OAuth |
+| [Negozio Merlo Fiorillo](#merlofiorillo-shop) | `merlofiorillo-shop` | `shop.merlofiorillo.it` | WordPress |
 
 Gli hostname finiscono con `${DOMAIN}`, che Flux sostituisce con il dominio
 reale. Un IP in LAN è un indirizzo MetalLB che la rete di casa raggiunge
@@ -186,6 +187,31 @@ verso quell'host.
 - Gli upgrade usano il client-side apply (`upgrade.serverSideApply:
   disabled`): il Deployment del bot usa la strategia Recreate, a cui il
   server-side apply non riesce a passare dal RollingUpdate di default.
+
+### Negozio Merlo Fiorillo { #merlofiorillo-shop }
+
+- WordPress con WooCommerce su `shop.merlofiorillo.it`. Il nome è nella zona
+  separata `merlofiorillo.it`, quindi ha un certificato e un listener del
+  Gateway propri (vedi [Rete](networking.md#traefik-and-the-gateway-api)). Il
+  record DNS non passa dal proxy di Cloudflare: punta all'indirizzo di casa
+  tramite `ddns.merlofiorillo.it`.
+- Chart `wordpress` da `groundhog2k.github.io/helm-charts` con l'immagine
+  ufficiale `wordpress`; MariaDB è uno StatefulSet in `database.yaml`. Entrambi
+  i pod girano con utenti non root e root filesystem in sola lettura, e il
+  namespace applica il livello Pod Security `restricted`.
+- La password del database arriva dal Secret SOPS `wordpress-secrets`.
+  `wp-config.php` è il template dell'immagine ufficiale, che legge le
+  impostazioni del database dall'ambiente. Il sito ripristinato conserva la
+  propria copia di quel template, con i salt originali, e prende comunque le
+  credenziali dal Secret.
+- Dati: i file di WordPress su `wordpress-data` (`nfs-spacex`), il database su
+  `mariadb-data` (`nfs-flash`).
+- La HTTPRoute risponde 403 a `/wp-admin/install.php` e
+  `/wp-admin/setup-config.php`: finché il database è vuoto, chiunque arrivi
+  all'installer potrebbe creare il primo amministratore. Un'installazione da
+  zero passa da `kubectl port-forward`.
+- Come per ogni route dell'entry point `websecure`, Traefik sostituisce il
+  corpo delle risposte 404, 500 e 503 con le proprie pagine di errore.
 
 ## Applicazioni disattivate e dismesse { #disabled }
 

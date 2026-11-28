@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: merlofiorillo-shop
+  labels:
+    app.kubernetes.io/name: merlofiorillo-shop
+    # Public PHP site: both pods meet the restricted profile, so enforce it
+    # instead of the cluster-wide baseline.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled

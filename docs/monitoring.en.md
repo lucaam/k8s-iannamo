@@ -103,11 +103,12 @@ The summaries and descriptions of these rules are written in Italian.
 
 | Group | Checks |
 |---|---|
-| Public Services | Authentik, Gatus, Home Assistant and Immich through Traefik: status 200, response time, certificate valid for more than 14 days |
+| Public Services | Authentik, Gatus, Home Assistant, Immich and the Merlo Fiorillo shop through Traefik: status 200, response time, certificate valid for more than 14 days. The shop also accepts the 302 to the installer that an empty WordPress returns |
 | Gateway | Traefik Service and MetalLB address: both must answer `301` (HTTP to HTTPS) |
 | Auth | Authentik server, embedded outpost (`/outpost.goauthentik.io/ping`), PostgreSQL port |
 | Home Automation | Home Assistant, Mosquitto, Zigbee2MQTT and a LED panel on the LAN |
 | Immich | server, machine learning, PostgreSQL, Valkey |
+| Merlo Fiorillo Shop | MariaDB port |
 | Cluster Core | CoreDNS |
 | Infrastructure | cert-manager and its webhook, MetalLB webhook, CloudNativePG webhook |
 | External | Cloudflare DNS, GitHub, Docker Hub, without alerts |

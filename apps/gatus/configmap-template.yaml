@@ -96,6 +96,24 @@ data:
         alerts:
           - type: telegram
 
+      # The shop has its own certificate, not the wildcard one. WordPress
+      # answers 302 to its installer while the database is empty and 200 once
+      # the site is restored: both prove that the certificate, the route, PHP
+      # and MariaDB work, while a database error is a 500. The redirect is not
+      # followed because the Gateway blocks the installer with a 403.
+      - name: "Merlo Fiorillo Shop"
+        group: "Public Services"
+        url: "https://shop.merlofiorillo.it"
+        interval: 2m
+        client:
+          ignore-redirect: true
+        conditions:
+          - "[STATUS] == any(200, 302)"
+          - "[CERTIFICATE_EXPIRATION] > 336h"
+          - "[RESPONSE_TIME] < 4000"
+        alerts:
+          - type: telegram
+
       # ========================================
       # 🚦 GATEWAY & INGRESS
       # ========================================
@@ -237,6 +255,18 @@ data:
       - name: "Immich Valkey (Redis)"
         group: "Immich"
         url: "tcp://immich-valkey.immich.svc.cluster.local:6379"
+        interval: 2m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: telegram
+
+      # ========================================
+      # 🛒 MERLO FIORILLO SHOP
+      # ========================================
+      - name: "Merlo Fiorillo MariaDB"
+        group: "Merlo Fiorillo Shop"
+        url: "tcp://wordpress-mariadb.merlofiorillo-shop.svc.cluster.local:3306"
         interval: 2m
         conditions:
           - "[CONNECTED] == true"
