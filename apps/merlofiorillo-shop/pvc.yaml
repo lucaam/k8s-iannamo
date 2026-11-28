@@ -3,6 +3,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: wordpress-data
   namespace: merlofiorillo-shop
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany
@@ -16,6 +18,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: mariadb-data
   namespace: merlofiorillo-shop
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany

@@ -110,6 +110,8 @@ are kept until the date in `.github/ci/retention.yaml` (see
 | `immich` | `immich-library` | `nfs-spacex` | 1T | RWX | Flux |
 | `immich` | `immich-machine-learning-cache`, `immich-valkey` | `nfs-flash` | 20Gi, 1Gi | RWX | Flux |
 | `immich` | `immich-pg-1`, `immich-pg-2` | `nfs-flash` | 32Gi each | RWO | CloudNativePG |
+| `merlofiorillo-shop` | `mariadb-data` | `nfs-flash` | 10Gi | RWX | Flux |
+| `merlofiorillo-shop` | `wordpress-data` | `nfs-spacex` | 20Gi | RWX | Flux |
 | `mqtt` | `mosquitto-data` | `nfs-spacex` | 1Gi | RWX | Helm chart, with `keep` |
 | `prometheus` | Prometheus and Alertmanager data | `nfs-flash` | 20Gi, 2Gi | RWO | StatefulSet (operator) |
 | `social-media-reuploader` | `social-media-reuploader-data` | `nfs-flash` | 1Gi | RWO | Helm chart, with `keep` |
@@ -125,6 +127,7 @@ are kept until the date in `.github/ci/retention.yaml` (see
   failure of a PostgreSQL instance, not of the node or of the pool, and it
   doubles the writes on `flash`.
 - **Authentik** uses the PostgreSQL bundled with its chart, a single pod.
+- **MariaDB** for the Merlo Fiorillo shop, a single pod (StatefulSet).
 - **SQLite** files on NFS: Gatus, Grafana and the Home Assistant recorder.
 - **Prometheus** keeps its time series database on NFS, which Prometheus
   reports as an unsupported filesystem at startup.

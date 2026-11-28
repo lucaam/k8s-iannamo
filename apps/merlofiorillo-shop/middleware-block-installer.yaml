@@ -1,0 +1,12 @@
+# Answers 403 to every request it receives. The source range can never match:
+# the default strategy reads the remote address, and the traefik Service uses
+# externalTrafficPolicy Cluster, so Traefik sees node or pod addresses only.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: block-installer
+  namespace: merlofiorillo-shop
+spec:
+  ipAllowList:
+    sourceRange:
+      - 127.0.0.1/32

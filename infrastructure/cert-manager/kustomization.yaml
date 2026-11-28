@@ -7,3 +7,4 @@ resources:
   - secret-cloudflare.sops.yaml
   - cluster-issuer.yaml
   - certificate-wildcard.yaml
+  - certificate-merlofiorillo-shop.yaml

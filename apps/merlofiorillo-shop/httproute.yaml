@@ -4,13 +4,36 @@ metadata:
   name: wordpress
   namespace: merlofiorillo-shop
 spec:
+  # shop.merlofiorillo.it is not covered by the wildcard certificate: the
+  # Gateway has a dedicated listener with its own certificate
+  # (infrastructure/traefik/gateway.yaml).
   parentRefs:
     - name: traefik-gateway
       namespace: traefik
-      sectionName: websecure
+      sectionName: websecure-merlofiorillo-shop
   hostnames:
     - shop.merlofiorillo.it
   rules:
+    # The WordPress installer is never needed through the Gateway. While the
+    # database is empty, as before a restore, anyone reaching install.php could
+    # create the first administrator and run code in the cluster. A fresh
+    # install, if one is ever needed, goes through kubectl port-forward.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /wp-admin/install.php
+        - path:
+            type: PathPrefix
+            value: /wp-admin/setup-config.php
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: traefik.io
+            kind: Middleware
+            name: block-installer
+      backendRefs:
+        - name: wordpress
+          port: 80
     - matches:
         - path:
             type: PathPrefix

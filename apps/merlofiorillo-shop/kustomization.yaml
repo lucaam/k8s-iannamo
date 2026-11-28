@@ -8,4 +8,5 @@ resources:
   - database.yaml
   - helm-repository.yaml
   - helm-release.yaml
+  - middleware-block-installer.yaml
   - httproute.yaml

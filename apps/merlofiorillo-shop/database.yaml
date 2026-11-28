@@ -48,6 +48,19 @@ spec:
     spec:
       terminationGracePeriodSeconds: 120
 
+      # The image runs as mysql (999) instead of starting as root: with every
+      # capability dropped, root could neither chown the data directory nor
+      # switch user with gosu. fsGroup makes the NFS volume writable: the
+      # CSIDriver has fsGroupPolicy File.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
       containers:
         - name: mariadb
           image: mariadb:11.8.9
@@ -77,12 +90,21 @@ spec:
                   name: wordpress-secrets
                   key: mariadb-root-password
 
+            # Runs mariadb-upgrade when Renovate moves the image to a newer
+            # release, so the system tables follow the server version.
+            - name: MARIADB_AUTO_UPGRADE
+              value: "1"
+
             - name: TZ
               value: Europe/Rome
 
           volumeMounts:
             - name: database-storage
               mountPath: /var/lib/mysql
+            - name: run
+              mountPath: /run/mysqld
+            - name: tmp
+              mountPath: /tmp
 
           startupProbe:
             exec:
@@ -123,6 +145,7 @@ spec:
 
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
@@ -131,3 +154,7 @@ spec:
         - name: database-storage
           persistentVolumeClaim:
             claimName: mariadb-data
+        - name: run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

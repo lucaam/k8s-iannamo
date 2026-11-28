@@ -23,3 +23,21 @@ spec:
       - kind: Secret
         name: wildcard-apps-tls
         namespace: traefik
+  # A listener per certificate: when a certificateRef cannot be loaded,
+  # Traefik drops the whole listener, so the shop certificate stays off
+  # websecure, which serves every other route. Same port and entry point.
+  - name: websecure-merlofiorillo-shop
+    hostname: shop.merlofiorillo.it
+    port: 8443
+    protocol: HTTPS
+    allowedRoutes:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            kubernetes.io/metadata.name: merlofiorillo-shop
+    tls:
+      certificateRefs:
+      - kind: Secret
+        name: merlofiorillo-shop-tls
+        namespace: traefik
