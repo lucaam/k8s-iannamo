@@ -15,3 +15,11 @@ spec:
         namespace: flux-system
   values:
     installCRDs: true
+    # DNS-01 self check over DNS-over-HTTPS. On the home network port 53 is
+    # intercepted: queries meant for the Cloudflare authoritative nameservers
+    # get answers from a caching resolver, which keeps serving the NXDOMAIN of
+    # the first check for up to the zone's negative TTL (30 minutes), so a
+    # challenge waited "not yet propagated" long after the TXT record was
+    # public. HTTPS on port 443 reaches the real resolvers.
+    dns01RecursiveNameservers: "https://1.1.1.1/dns-query,https://8.8.8.8/dns-query"
+    dns01RecursiveNameserversOnly: true
