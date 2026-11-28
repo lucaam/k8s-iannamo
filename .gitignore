@@ -6,3 +6,7 @@ project_dump.txt
 __pycache__/
 *.py[cod]
 *.pyo
+
+# WireGuard configuration of the media VPN. Only its values, encrypted with
+# SOPS, go into the repository (apps/media/secret-gluetun.sops.yaml).
+vpn.conf

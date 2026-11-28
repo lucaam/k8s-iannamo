@@ -3,14 +3,12 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - pvc.yaml
-  - secret-transmission.sops.yaml
-  - secret-lidarr.sops.yaml
-  - secret-prowlarr.sops.yaml
-  - secret-musicseerr.sops.yaml
-  - secret-soulsync.sops.yaml
-  - secret-aurral.sops.yaml
   - secret-slskd.sops.yaml
-metadata:
-  name: media
-  labels:
-    app.kubernetes.io/name: media
+  - secret-transmission.sops.yaml
+  - secret-gluetun.sops.yaml
+  - middleware-authentik.yaml
+  - soulsync.yaml
+  - slskd.yaml
+  - prowlarr.yaml
+  - transmission.yaml
+  - httproute.yaml

@@ -24,6 +24,10 @@ repeat version numbers.
 | [External services](#external-services) | `external-services` | `homelab.${DOMAIN}` | Authentik forward auth |
 | [TREK](#trek) | `trek` | `trek.${DOMAIN}` | Authentik OIDC |
 | [social-media-reuploader](#social-media-reuploader) | `social-media-reuploader` | `social-media-reuploader.${DOMAIN}` | OAuth |
+| [SoulSync](#music) | `media` | `soulsync.${DOMAIN}` | Authentik forward auth, then its own |
+| [slskd](#music) | `media` | `slskd.${DOMAIN}` | Authentik forward auth, then its own |
+| [Prowlarr](#music) | `media` | `prowlarr.${DOMAIN}` | Authentik forward auth, then its own |
+| [Transmission](#music) | `media` | `transmission.${DOMAIN}` | Authentik forward auth, then its own |
 
 Hostnames end with `${DOMAIN}`, which Flux replaces with the real domain. A LAN
 IP is a MetalLB address that the home network reaches directly, without
@@ -116,6 +120,65 @@ are explained in [Security and secrets](security.md#authentication).
   learning cache and Valkey on `nfs-flash`.
 - Immich writes a nightly database dump into the library, on the same pool as
   the photos: it is not a backup.
+
+### Music stack { #music }
+
+A song-oriented music stack in the `media` namespace, made of plain
+Deployments (none of these apps has an upstream chart): `soulsync.yaml`,
+`slskd.yaml`, `prowlarr.yaml` and `transmission.yaml` in `apps/media/`.
+
+```mermaid
+flowchart LR
+    soulsync["SoulSync<br/>library, player"] -->|API| slskd["slskd"]
+    soulsync -->|search| prowlarr["Prowlarr"]
+    soulsync -->|RPC| transmission["Transmission"]
+    slskd -->|"home IP"| soulseek(["Soulseek"])
+    prowlarr --> indexers(["torrent indexers"])
+    transmission --- gluetun["gluetun<br/>sidecar"] -->|WireGuard| vpn(["VPN provider"])
+```
+
+- **SoulSync** manages the library: it syncs playlists (Spotify, Tidal, and
+  more), searches Soulseek through slskd and torrents through Prowlarr and
+  Transmission, checks, tags and files every track under `/data/music`, and
+  plays it with its own player and user accounts.
+- **slskd** is the Soulseek client. It connects from the home IP and listens
+  on no public port, and it shares nothing (`SLSKD_SHARED_DIR` is not set).
+- **Prowlarr** holds the torrent indexers; it only sends searches.
+- **Transmission** sends all its traffic through a WireGuard tunnel opened by
+  **gluetun**, a native sidecar in the same pod. gluetun's firewall is the kill
+  switch: Transmission starts only once the tunnel is up, DNS goes through the
+  tunnel, and only the pod and Service networks of the cluster bypass it.
+  There is no port forwarding through the VPN.
+- Storage: one volume, `media-data` on `nfs-spacex`, holds the downloads of
+  both clients and the library (`/data/downloads/...`, `/data/music`,
+  `/data/staging`), mounted by every app under the same paths. Each app
+  keeps its configuration and SQLite databases on its own `nfs-flash` volume.
+  Every Deployment uses `Recreate`, so each database has one writer.
+- Every UI is behind the `authentik-forward-auth` middleware and keeps its
+  own login. The forward auth works in single-application mode, so each
+  hostname needs its own Proxy Provider in Authentik, added to the embedded
+  outpost; until then the outpost refuses the hostname.
+- Secrets, encrypted with SOPS: `slskd-secret` (web login, JWT key, API key,
+  Soulseek account), `transmission-secret` (RPC login) and `gluetun-secret`
+  (the tunnel). `gluetun-secret` holds the values of the provider's
+  `wg0.conf`, with the IPv4 address only: the pod network has no IPv6 and
+  gluetun refuses an IPv6 interface address. `vpn.conf`, the plaintext file,
+  is in `.gitignore`.
+
+First setup, after the Authentik providers exist:
+
+1. Prowlarr: create the login, add the indexers, copy the API key
+   (Settings > General).
+2. SoulSync: create the admin account, then add the download sources:
+   - Soulseek: `http://slskd.media.svc.cluster.local:5030` and the key in
+     `SLSKD_API_KEY` (the part after the last `;`);
+   - Prowlarr: `http://prowlarr.media.svc.cluster.local:9696` and its API key;
+   - Transmission: `http://transmission.media.svc.cluster.local:9091` with
+     `TRANSMISSION__RPC_USERNAME` and `TRANSMISSION__RPC_PASSWORD`.
+3. Spotify, optional: use the redirect URI `https://soulsync.${DOMAIN}/callback`
+   both in SoulSync and in the Spotify app.
+
+Gatus checks the four Services (group "Music").
 
 ## Monitoring
 

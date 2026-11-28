@@ -244,6 +244,48 @@ data:
           - type: telegram
 
       # ========================================
+      # 🎵 MUSIC (namespace media)
+      # ========================================
+      - name: "SoulSync"
+        group: "Music"
+        url: "http://soulsync.media.svc.cluster.local:8008/api/startup-status"
+        interval: 5m
+        conditions:
+          - "[STATUS] == 200"
+        alerts:
+          - type: telegram
+
+      - name: "slskd"
+        group: "Music"
+        url: "http://slskd.media.svc.cluster.local:5030/health"
+        interval: 5m
+        conditions:
+          - "[STATUS] == 200"
+        alerts:
+          - type: telegram
+
+      - name: "Prowlarr"
+        group: "Music"
+        url: "http://prowlarr.media.svc.cluster.local:9696/ping"
+        interval: 5m
+        conditions:
+          - "[STATUS] == 200"
+        alerts:
+          - type: telegram
+
+      # 401 means Transmission answers and gluetun's firewall lets the request
+      # in. It does not prove that the tunnel works: gluetun restarts the
+      # tunnel by itself when its own healthcheck fails.
+      - name: "Transmission"
+        group: "Music"
+        url: "http://transmission.media.svc.cluster.local:9091/transmission/rpc"
+        interval: 5m
+        conditions:
+          - "[STATUS] == 401"
+        alerts:
+          - type: telegram
+
+      # ========================================
       # ☸️ KUBERNETES CORE
       # ========================================
       # - name: "Kubernetes API"

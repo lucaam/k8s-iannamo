@@ -237,6 +237,17 @@
       "addLabels": ["home-automation"]
     },
     {
+      "description": "Music stack (SoulSync, slskd, Prowlarr, Transmission with gluetun): minor, patch and digest updates in one PR, automerged once 3 days old. Most of these images are on GHCR, which publishes no tag timestamps, so the age cannot be computed; timestamp-optional lets them through instead of leaving them pending forever. Majors keep the global Docker rule (manual review)",
+      "matchFileNames": ["apps/media/**"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "media",
+      "minimumReleaseAge": "3 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional",
+      "automerge": true,
+      "automergeType": "pr",
+      "addLabels": ["media"]
+    },
+    {
       "description": "kubernetes manager: images in HelmRelease values are already tracked by the flux manager, so skip the duplicates it finds in helm-release.yaml",
       "matchManagers": ["kubernetes"],
       "matchFileNames": ["**/helm-release.yaml"],

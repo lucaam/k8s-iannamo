@@ -1,0 +1,133 @@
+# slskd, the Soulseek client that SoulSync drives through its API.
+#
+# It connects to Soulseek from the home IP, without the VPN. It does not
+# listen on the LAN either (no port forwarding to 50300), so only peers that
+# accept incoming connections can send files. Nothing is shared: add
+# SLSKD_SHARED_DIR (e.g. /data/music, read-only) to share the library, which
+# many Soulseek users expect in return.
+#
+# Credentials come from slskd-secret (secret-slskd.sops.yaml):
+#   SLSKD_USERNAME, SLSKD_PASSWORD   web UI login
+#   SLSKD_JWT_KEY                    signs the UI sessions, so they survive restarts
+#   SLSKD_API_KEY                    administrator key, to paste into SoulSync
+#   SLSKD_SLSK_USERNAME, SLSKD_SLSK_PASSWORD
+#                                    Soulseek account; the network registers
+#                                    it at the first login if the name is free
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slskd
+  namespace: media
+  labels:
+    app.kubernetes.io/name: slskd
+    app.kubernetes.io/part-of: media
+spec:
+  replicas: 1
+  # One writer for the SQLite databases on NFS, one Soulseek session.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: slskd
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: slskd
+        app.kubernetes.io/part-of: media
+    spec:
+      priorityClassName: homelab-low
+      securityContext:
+        # The image runs as a non-root user when started with one ("--user
+        # mode" of its entrypoint); PUID/PGID must then stay unset.
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: slskd
+          image: docker.io/slskd/slskd:0.26.2@sha256:d0963a3e5b16facd295bf4f2156dad0182f246b1b21a032cae12f5494c694843
+          envFrom:
+            - secretRef:
+                name: slskd-secret
+          env:
+            - name: TZ
+              value: Europe/Rome
+            - name: SLSKD_UMASK
+              value: "0002"
+            - name: SLSKD_DOWNLOADS_DIR
+              value: /data/downloads/soulseek
+            - name: SLSKD_INCOMPLETE_DIR
+              value: /data/downloads/soulseek-incomplete
+            # TLS ends at Traefik.
+            - name: SLSKD_NO_HTTPS
+              value: "true"
+            - name: SLSKD_NO_VERSION_CHECK
+              value: "true"
+            # The image sets a 2 GiB GC heap limit, above the memory limit
+            # below: keep the heap within it, so the GC runs before the OOM
+            # killer does.
+            - name: DOTNET_GCHeapHardLimit
+              value: "0x30000000"
+          ports:
+            - name: http
+              containerPort: 5030
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 20m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            # SLSKD_APP_DIR: slskd.yml, the SQLite databases and the logs.
+            - name: config
+              mountPath: /app
+            - name: media
+              mountPath: /data
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: slskd-config
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slskd
+  namespace: media
+  labels:
+    app.kubernetes.io/name: slskd
+    app.kubernetes.io/part-of: media
+spec:
+  selector:
+    app.kubernetes.io/name: slskd
+  ports:
+    - name: http
+      port: 5030
+      targetPort: http

@@ -114,6 +114,10 @@ spec:
 | `traefik.${DOMAIN}` | IngressRoute del chart di Traefik | forward auth |
 | `trek.${DOMAIN}` | `trek/trek` | OIDC |
 | `social-media-reuploader.${DOMAIN}` | `social-media-reuploader/social-media-reuploader-gui` | OAuth |
+| `soulsync.${DOMAIN}` | `media/soulsync` | forward auth |
+| `slskd.${DOMAIN}` | `media/slskd` | forward auth |
+| `prowlarr.${DOMAIN}` | `media/prowlarr` | forward auth |
+| `transmission.${DOMAIN}` | `media/transmission` | forward auth |
 | `homelab.${DOMAIN}` | `external-services/external-http` | forward auth |
 | `immich`, `immich.lan` | `immich/immich-internal`, su `web` e `websecure` | login di Immich |
 
@@ -148,7 +152,7 @@ sequenceDiagram
 
 - Una HTTPRoute può usare solo un Middleware del proprio namespace, quindi il
   middleware è copiato dove serve: `traefik` (dashboard), `home-assistant`,
-  `prometheus` e `external-services`.
+  `prometheus`, `external-services` e `media`.
 - La HTTPRoute `authentik/authentik-outpost` manda all'outpost il path
   `/outpost.goauthentik.io` di ogni host sotto `${DOMAIN}`, e l'outpost
   completa il login.

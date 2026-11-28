@@ -15,5 +15,6 @@ resources:
   - external-services
   - trek
   - social-media-reuploader
+  - media
   # - paperless-ngx
   # - ollama

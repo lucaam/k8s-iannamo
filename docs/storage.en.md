@@ -110,6 +110,8 @@ are kept until the date in `.github/ci/retention.yaml` (see
 | `immich` | `immich-library` | `nfs-spacex` | 1T | RWX | Flux |
 | `immich` | `immich-machine-learning-cache`, `immich-valkey` | `nfs-flash` | 20Gi, 1Gi | RWX | Flux |
 | `immich` | `immich-pg-1`, `immich-pg-2` | `nfs-flash` | 32Gi each | RWO | CloudNativePG |
+| `media` | `media-data` | `nfs-spacex` | 1Ti | RWX | Flux |
+| `media` | `soulsync-config`, `slskd-config`, `prowlarr-config`, `transmission-config` | `nfs-flash` | 5Gi, 2Gi, 1Gi, 1Gi | RWX | Flux |
 | `mqtt` | `mosquitto-data` | `nfs-spacex` | 1Gi | RWX | Helm chart, with `keep` |
 | `prometheus` | Prometheus and Alertmanager data | `nfs-flash` | 20Gi, 2Gi | RWO | StatefulSet (operator) |
 | `social-media-reuploader` | `social-media-reuploader-data` | `nfs-flash` | 1Gi | RWO | Helm chart, with `keep` |

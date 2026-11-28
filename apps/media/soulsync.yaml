@@ -1,0 +1,178 @@
+# SoulSync manages the music library: it syncs playlists (Spotify, Tidal,
+# ...), searches Soulseek through slskd and torrents through Prowlarr and
+# Transmission, checks and tags every file and files it under /data/music. It
+# has its own player and its own user accounts.
+#
+# It runs as uid 1000 from the start instead of dropping privileges with gosu:
+# the entrypoint supports it, and only logs a "not writable" warning for each
+# directory, because its writability check itself uses gosu.
+#
+# The default paths of the app are kept and backed by the volumes, so nothing
+# lands in the container layer even before the settings are touched:
+#   /app/downloads  -> media-data downloads/soulseek (where slskd saves)
+#   /app/Transfer   -> media-data music (the library)
+#   /app/Staging    -> media-data staging (imports)
+# These are separate mounts, so moving a file between them is a copy and a
+# delete. /data, the whole volume, is mounted too: Transmission reports its
+# downloads under /data/downloads/torrents, and SoulSync reads them there.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soulsync
+  namespace: media
+  labels:
+    app.kubernetes.io/name: soulsync
+    app.kubernetes.io/part-of: media
+spec:
+  replicas: 1
+  # One writer for the SQLite databases on NFS.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: soulsync
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: soulsync
+        app.kubernetes.io/part-of: media
+    spec:
+      priorityClassName: homelab-low
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+        # The library can hold many files: change ownership only when the
+        # root of the volume does not match.
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # The kubelet creates missing subPath directories as root, which
+        # uid 1000 cannot write to: create them first, as uid 1000.
+        - name: init-dirs
+          image: ghcr.io/nezreka/soulsync:3.7.0@sha256:5dc5c3ace13f321a4d342b33baa8c09b34e4ed711aabf84bcf57e83f817c6a14
+          command:
+            - mkdir
+            - -p
+            - /config/config
+            - /config/data
+            - /config/storage
+            - /data/downloads/soulseek
+            - /data/downloads/soulseek-incomplete
+            - /data/downloads/torrents/complete
+            - /data/downloads/torrents/incomplete
+            - /data/music
+            - /data/staging
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: media
+              mountPath: /data
+      containers:
+        - name: soulsync
+          image: ghcr.io/nezreka/soulsync:3.7.0@sha256:5dc5c3ace13f321a4d342b33baa8c09b34e4ed711aabf84bcf57e83f817c6a14
+          env:
+            - name: TZ
+              value: Europe/Rome
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            # Group-writable files: slskd, Transmission and SoulSync share
+            # the downloads as group 1000.
+            - name: UMASK
+              value: "002"
+          ports:
+            - name: http
+              containerPort: 8008
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          startupProbe:
+            httpGet:
+              path: /api/startup-status
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /api/startup-status
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/startup-status
+              port: http
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 5
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+              subPath: config
+            - name: config
+              mountPath: /app/data
+              subPath: data
+            - name: config
+              mountPath: /app/storage
+              subPath: storage
+            - name: media
+              mountPath: /data
+            - name: media
+              mountPath: /app/downloads
+              subPath: downloads/soulseek
+            - name: media
+              mountPath: /app/Transfer
+              subPath: music
+            - name: media
+              mountPath: /app/Staging
+              subPath: staging
+            # Logs also go to stdout; the files do not need to survive a restart.
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: soulsync-config
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-data
+        - name: logs
+          emptyDir:
+            sizeLimit: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: soulsync
+  namespace: media
+  labels:
+    app.kubernetes.io/name: soulsync
+    app.kubernetes.io/part-of: media
+spec:
+  selector:
+    app.kubernetes.io/name: soulsync
+  ports:
+    - name: http
+      port: 8008
+      targetPort: http

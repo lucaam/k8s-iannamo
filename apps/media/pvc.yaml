@@ -1,128 +1,85 @@
+# Downloads and the music library on one volume (HDD pool), shared by every
+# app of the stack under the same /data paths.
+# Layout, created by the init container of SoulSync:
+#   /data/downloads/soulseek            slskd, completed downloads
+#   /data/downloads/soulseek-incomplete slskd, partial files
+#   /data/downloads/torrents/complete   Transmission, completed downloads
+#   /data/downloads/torrents/incomplete Transmission, partial files
+#   /data/music                         library, filed by SoulSync
+#   /data/staging                       imports waiting for SoulSync
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: media-shared
+  name: media-data
   namespace: media
-  labels:
-    app.kubernetes.io/name: media-shared
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: nfs-spacex
   resources:
     requests:
       storage: 1Ti
-  storageClassName: nfs-spacex
-# Shared media/downloads PVC (RWX)
 ---
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: transmission-config
-  namespace: media
-  labels:
-    app.kubernetes.io/name: transmission-config
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 5Gi
-  storageClassName: nfs-flash
-# Small config PVC for Transmission (in media namespace)
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: lidarr-config
-  namespace: media
-  labels:
-    app.kubernetes.io/name: lidarr-config
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: nfs-flash
-# Small config PVC for Lidarr (in media namespace)
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: prowlarr-config
-  namespace: media
-  labels:
-    app.kubernetes.io/name: prowlarr-config
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 5Gi
-  storageClassName: nfs-flash
-# Small config PVC for Prowlarr (in media namespace)
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: musicseerr-config
-  namespace: media
-  labels:
-    app.kubernetes.io/name: musicseerr-config
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 5Gi
-  storageClassName: nfs-flash
-# Small config PVC for Musicseerr (in media namespace)
----
+# SoulSync configuration, SQLite databases and its own storage (playlist
+# covers, avatars), as subdirectories config/, data/ and storage/.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: soulsync-config
   namespace: media
-  labels:
-    app.kubernetes.io/name: soulsync-config
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: nfs-flash
   resources:
     requests:
       storage: 5Gi
-  storageClassName: nfs-flash
-# Small config PVC for SoulSync (in media namespace)
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: aurral-config
-  namespace: media
-  labels:
-    app.kubernetes.io/name: aurral-config
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 5Gi
-  storageClassName: nfs-flash
-# Small config PVC for Aurral (in media namespace)
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: slskd-config
   namespace: media
-  labels:
-    app.kubernetes.io/name: slskd-config
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: nfs-flash
   resources:
     requests:
-      storage: 5Gi
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prowlarr-config
+  namespace: media
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteMany
   storageClassName: nfs-flash
-# Small config PVC for SLSKD (in media namespace)
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: transmission-config
+  namespace: media
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs-flash
+  resources:
+    requests:
+      storage: 1Gi
